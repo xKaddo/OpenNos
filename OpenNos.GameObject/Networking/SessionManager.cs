@@ -50,7 +50,20 @@ namespace OpenNos.GameObject
             }
         }
 
-        public void RemoveSession(INetworkClient client)
+        public virtual void StopServer()
+        {
+            _sessions.Clear();
+            ServerManager.Instance.StopServer();
+        }
+
+        protected virtual ClientSession IntializeNewSession(INetworkClient client)
+        {
+            ClientSession session = new ClientSession(client);
+            client.SetClientSession(session);
+            return session;
+        }
+
+        protected void RemoveSession(INetworkClient client)
         {
             ClientSession session;
             _sessions.TryRemove(client.ClientId, out session);
@@ -59,6 +72,14 @@ namespace OpenNos.GameObject
             if (session != null)
             {
                 session.IsDisposing = true;
+
+                if (IsWorldServer && session.HasSelectedCharacter)
+                {
+                    session.Character.Mates.Where(s => s.IsTeamMember).ToList().ForEach(s => session.CurrentMapInstance?.Broadcast(session, s.GenerateOut(), ReceiverType.AllExceptMe));
+                    session.CurrentMapInstance?.Broadcast(session, session.Character.GenerateOut(), ReceiverType.AllExceptMe);
+                }
+
+                session.Destroy();
 
                 if (IsWorldServer)
                 {
@@ -75,30 +96,14 @@ namespace OpenNos.GameObject
                         }
 
                         session.Character.Save();
-
-                        // only remove the character from map if the character has been set
-                        session.CurrentMap?.Broadcast(session, session.Character.GenerateOut(), ReceiverType.AllExceptMe);
                     }
                 }
 
-                session.Destroy();
                 client.Disconnect();
                 Logger.Log.Info(Language.Instance.GetMessageFromKey("DISCONNECT") + client.ClientId);
+
                 // session = null;
             }
-        }
-
-        public virtual void StopServer()
-        {
-            _sessions.Clear();
-            ServerManager.Instance.StopServer();
-        }
-
-        protected virtual ClientSession IntializeNewSession(INetworkClient client)
-        {
-            ClientSession session = new ClientSession(client);
-            client.SetClientSession(session);
-            return session;
         }
 
         #endregion

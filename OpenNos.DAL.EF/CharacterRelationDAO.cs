@@ -18,7 +18,6 @@ using OpenNos.DAL.EF.Helpers;
 using OpenNos.DAL.Interface;
 using OpenNos.Data;
 using OpenNos.Data.Enums;
-using OpenNos.Domain;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,24 +28,16 @@ namespace OpenNos.DAL.EF
     {
         #region Methods
 
-        public DeleteResult Delete(long characterId, long relatedCharacterId)
+        public DeleteResult Delete(long id)
         {
             try
             {
                 using (var context = DataAccessHelper.CreateContext())
                 {
-                    CharacterRelation relation = context.CharacterRelation.SingleOrDefault(c => c.CharacterId.Equals(characterId) && c.RelatedCharacterId.Equals(relatedCharacterId));
+                    CharacterRelation relation = context.CharacterRelation.SingleOrDefault(c => c.CharacterRelationId.Equals(id));
 
                     if (relation != null)
                     {
-                        if (relation.RelationType != CharacterRelationType.Blocked)
-                        {
-                            CharacterRelation otherRelation = context.CharacterRelation.SingleOrDefault(c => c.CharacterId.Equals(relatedCharacterId) && c.RelatedCharacterId.Equals(characterId));
-                            if (otherRelation != null)
-                            {
-                                context.CharacterRelation.Remove(otherRelation);
-                            }
-                        }
                         context.CharacterRelation.Remove(relation);
                         context.SaveChanges();
                     }
@@ -56,36 +47,8 @@ namespace OpenNos.DAL.EF
             }
             catch (Exception e)
             {
-                //Logger.Log.Error(String.Format(Language.Instance.GetMessageFromKey("DELETE_CHARACTER_ERROR"), characterSlot, e.Message), e);
+                Logger.Log.Error(string.Format(Language.Instance.GetMessageFromKey("DELETE_CHARACTER_ERROR"), id, e.Message), e);
                 return DeleteResult.Error;
-            }
-        }
-
-        public IList<CharacterRelationDTO> GetFriends(long characterId)
-        {
-            using (var context = DataAccessHelper.CreateContext())
-            {
-                return context.CharacterRelation
-                    .Where(c => c.RelationType != CharacterRelationType.Blocked && c.CharacterId == characterId)
-                    .OrderByDescending(c=>c.RelationType)
-                    .ThenBy(c=>c.RelatedCharacterId)
-                    .ToList()
-                    .Select(c => _mapper.Map<CharacterRelationDTO>(c))
-                    .ToList();
-                
-            }
-        }
-
-        public IList<CharacterRelationDTO> GetBlacklisted(long characterId)
-        {
-            using (var context = DataAccessHelper.CreateContext())
-            {
-                return context.CharacterRelation
-                    .Where(c => c.RelationType == CharacterRelationType.Blocked && c.CharacterId == characterId)
-                    .OrderBy(c=>c.RelatedCharacterId)
-                    .ToList()
-                    .Select(c => _mapper.Map<CharacterRelationDTO>(c))
-                    .ToList();
             }
         }
 
@@ -104,17 +67,41 @@ namespace OpenNos.DAL.EF
                         relation = Insert(relation, context);
                         return SaveResult.Inserted;
                     }
-                    else
-                    {
-                        relation = Update(entity, relation, context);
-                        return SaveResult.Updated;
-                    }
+                    relation = Update(entity, relation, context);
+                    return SaveResult.Updated;
                 }
             }
             catch (Exception e)
             {
-                //Logger.Log.Error(String.Format(Language.Instance.GetMessageFromKey("INSERT_ERROR"), character, e.Message), e);
+                Logger.Log.Error(string.Format(Language.Instance.GetMessageFromKey("UPDATE_CHARACTERRELATION_ERROR"), relation.CharacterRelationId, e.Message), e);
                 return SaveResult.Error;
+            }
+        }
+
+        public IEnumerable<CharacterRelationDTO> LoadAll()
+        {
+            using (var context = DataAccessHelper.CreateContext())
+            {
+                foreach (CharacterRelation entity in context.CharacterRelation)
+                {
+                    yield return _mapper.Map<CharacterRelationDTO>(entity);
+                }
+            }
+        }
+
+        public CharacterRelationDTO LoadById(long relId)
+        {
+            try
+            {
+                using (var context = DataAccessHelper.CreateContext())
+                {
+                    return _mapper.Map<CharacterRelationDTO>(context.CharacterRelation.FirstOrDefault(s => s.CharacterRelationId.Equals(relId)));
+                }
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e);
+                return null;
             }
         }
 

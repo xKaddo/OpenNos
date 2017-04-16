@@ -37,8 +37,9 @@ namespace OpenNos.Domain
         FernonF = 17,
         Cliff = 18,
         LandOfTheDead = 19,
-        Act32 = 20
-
-        // Future group : Raid | Time-Space |
+        Act32 = 20,
+        CleftOfDarkness = 21,
+        PVPMap = 22,
+        Citadel = 23
     }
 }

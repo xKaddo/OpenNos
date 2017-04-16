@@ -35,6 +35,19 @@ namespace OpenNos.WebApi.SelfHost
         }
 
         /// <summary>
+        /// Refresh Bazaar
+        /// </summary>
+        public void BazaarRefresh(string worldgroup, long BazaarItemId)
+        {
+            Clients.All.refreshBazaar(worldgroup, BazaarItemId);
+        }
+
+        public bool CharacterIsConnected(string worldgroup, long CharacterId)
+        {
+            return ServerCommunicationHelper.Instance.WorldserverGroups.FirstOrDefault(s => s.GroupName == worldgroup).Servers.Any(c => c.ConnectedCharacters.ContainsValue(CharacterId));
+        }
+
+        /// <summary>
         /// Cleanup hold Data, this is for restarting the server
         /// </summary>
         public void Cleanup()
@@ -79,7 +92,7 @@ namespace OpenNos.WebApi.SelfHost
         /// </summary>
         /// <param name="characterName">Name of the Character.</param>
         /// <param name="characterId">If of the Character.</param>
-        public bool ConnectCharacter(Guid worldId, string characterName, long characterId)
+        public bool ConnectCharacter(string worldgroup, Guid worldId, string characterName, long characterId)
         {
             try
             {
@@ -96,7 +109,7 @@ namespace OpenNos.WebApi.SelfHost
                 ServerCommunicationHelper.Instance.Worldservers.SingleOrDefault(w => w.Id == worldId).ConnectedCharacters[characterName] = characterId;
 
                 // inform clients
-                Clients.All.characterConnected(characterName, characterId);
+                Clients.All.characterConnected(worldgroup, characterName, characterId);
                 return true;
             }
             catch (Exception ex)
@@ -137,7 +150,7 @@ namespace OpenNos.WebApi.SelfHost
         /// </summary>
         /// <param name="characterName">Character who wants to disconnect.</param>
         /// <param name="characterId">same as for characterName</param>
-        public void DisconnectCharacter(string characterName, long characterId)
+        public void DisconnectCharacter(string worldgroup, string characterName, long characterId)
         {
             try
             {
@@ -148,7 +161,7 @@ namespace OpenNos.WebApi.SelfHost
                     worldserver.ConnectedCharacters.Remove(characterName);
 
                     // inform clients
-                    Clients.All.characterDisconnected(characterName, characterId);
+                    Clients.All.characterDisconnected(worldgroup, characterName, characterId);
 
                     Logger.Log.InfoFormat($"Character {characterName} has been disconnected.");
                 }
@@ -157,6 +170,14 @@ namespace OpenNos.WebApi.SelfHost
             {
                 Logger.Log.Error("Error while disconnecting character.", ex);
             }
+        }
+
+        /// <summary>
+        /// Refresh Family
+        /// </summary>
+        public void FamilyRefresh(string worldgroup, long FamilyId)
+        {
+            Clients.All.refreshFamily(worldgroup, FamilyId);
         }
 
         /// <summary>
@@ -186,32 +207,6 @@ namespace OpenNos.WebApi.SelfHost
             return false;
         }
 
-        public IEnumerable<String> RetrieveServerStatistics()
-        {
-            List<String> result = new List<String>();
-            try
-            {
-                foreach(WorldserverGroupDTO servergroup in ServerCommunicationHelper.Instance.WorldserverGroups)
-                {
-                    int serverSessionAmount = 0;
-                    foreach(WorldserverDTO world in servergroup.Servers)
-                    {
-                        int channelSessionAmount = world.ConnectedAccounts.Count();
-                        serverSessionAmount += channelSessionAmount;
-                        result.Add($"Channel{world.ChannelId}: {channelSessionAmount} sessions.");
-                    }
-
-                    result.Add($"Server {servergroup.GroupName}: {serverSessionAmount} sessions.");
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Log.Error("Error while retriving server statistics.", ex);
-            }
-
-            return result;
-        }
-
         /// <summary>
         /// Kick a session by providing SessionId or AccountName
         /// </summary>
@@ -219,12 +214,12 @@ namespace OpenNos.WebApi.SelfHost
         {
             try
             {
-                if (sessionId.HasValue || !String.IsNullOrEmpty(accountName))
+                if (sessionId.HasValue || !string.IsNullOrEmpty(accountName))
                 {
                     // inform clients
                     Clients.All.kickSession(sessionId, accountName);
 
-                    if (!String.IsNullOrEmpty(accountName))
+                    if (!string.IsNullOrEmpty(accountName))
                     {
                         DisconnectAccount(accountName);
                     }
@@ -248,6 +243,14 @@ namespace OpenNos.WebApi.SelfHost
             {
                 Logger.Log.Error("General Error", ex);
             }
+        }
+
+        /// <summary>
+        /// Refresh Relation
+        /// </summary>
+        public void PenaltyLogRefresh(int id)
+        {
+            Clients.All.refreshPenaltyLog(id);
         }
 
         /// <summary>
@@ -321,6 +324,14 @@ namespace OpenNos.WebApi.SelfHost
         }
 
         /// <summary>
+        /// Refresh Relation
+        /// </summary>
+        public void RelationRefresh(string worldgroup, long id)
+        {
+            Clients.All.refreshRelation(worldgroup, id);
+        }
+
+        /// <summary>
         /// Build the channel packets
         /// </summary>
         /// <param name="sessionId"></param>
@@ -349,38 +360,65 @@ namespace OpenNos.WebApi.SelfHost
                 }
                 return channelPacket;
             }
-            else
+            return null;
+        }
+
+        public IEnumerable<string> RetrieveServerStatistics()
+        {
+            List<string> result = new List<string>();
+            try
             {
-                return null;
+                foreach (WorldserverGroupDTO servergroup in ServerCommunicationHelper.Instance.WorldserverGroups)
+                {
+                    int serverSessionAmount = 0;
+                    foreach (WorldserverDTO world in servergroup.Servers)
+                    {
+                        int channelSessionAmount = world.ConnectedAccounts.Count();
+                        serverSessionAmount += channelSessionAmount;
+                        result.Add($"Channel{world.ChannelId}: {channelSessionAmount} sessions.");
+                    }
+
+                    result.Add($"Server {servergroup.GroupName}: {serverSessionAmount} sessions.");
+                }
             }
+            catch (Exception ex)
+            {
+                Logger.Log.Error("Error while retriving server statistics.", ex);
+            }
+
+            return result;
         }
 
         /// <summary>
         /// Send a message to a Character
         /// </summary>
         /// <returns></returns>
-        public int? SendMessageToCharacter(string messagePacket, int fromChannel, MessageType messageType, string characterName, int? characterId = null)
+        public int? SendMessageToCharacter(string worldgroup, string sourceCharacterName, string characterName, string messagePacket, int fromChannel, MessageType messageType)
         {
             try
             {
-                WorldserverDTO worldserver = ServerCommunicationHelper.Instance.Worldservers.SingleOrDefault(c => c.ConnectedCharacters.Any(cc => cc.Key == characterName)
-                                                                                                             || (characterId.HasValue && c.ConnectedCharacters.ContainsValue(characterId.Value)));
+                WorldserverDTO worldserver = ServerCommunicationHelper.Instance.WorldserverGroups.FirstOrDefault(s => s.GroupName == worldgroup).Servers.SingleOrDefault(c => c.ConnectedCharacters.Any(cc => cc.Key == characterName));
 
                 if (worldserver != null)
                 {
-                    if(String.IsNullOrEmpty(characterName) && characterId.HasValue)
-                    {
-                        characterName = worldserver.ConnectedCharacters.SingleOrDefault(c => c.Value == characterId.Value).Key;
-                    }
-
                     //character is connected to different world
-                    Clients.All.sendMessageToCharacter(characterName, messagePacket, fromChannel, messageType);
+                    Clients.All.sendMessageToCharacter(worldgroup, sourceCharacterName, characterName, messagePacket, fromChannel, messageType);
                     return worldserver.ChannelId;
                 }
-                else if(messageType == MessageType.Shout)
+                if (messageType == MessageType.Shout)
                 {
                     //send to all registered worlds
-                    Clients.All.sendMessageToCharacter(characterName, messagePacket, fromChannel, messageType);
+                    Clients.All.sendMessageToCharacter("*", sourceCharacterName, characterName, messagePacket, fromChannel, messageType);
+                    return null;
+                }
+                if (messageType == MessageType.Family)
+                {
+                    Clients.All.sendMessageToCharacter(worldgroup, sourceCharacterName, characterName, messagePacket, fromChannel, messageType);
+                    return null;
+                }
+                if (messageType == MessageType.FamilyChat)
+                {
+                    Clients.All.sendMessageToCharacter(worldgroup, sourceCharacterName, characterName, messagePacket, fromChannel, messageType);
                     return null;
                 }
             }

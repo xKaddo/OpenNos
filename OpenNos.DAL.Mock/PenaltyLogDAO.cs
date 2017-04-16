@@ -15,6 +15,7 @@
 using OpenNos.DAL.Interface;
 using OpenNos.Data;
 using OpenNos.Data.Enums;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -26,14 +27,12 @@ namespace OpenNos.DAL.Mock
 
         public DeleteResult Delete(int penaltylogId)
         {
-            PenaltyLogDTO dto = LoadById(penaltylogId);
-            Container.Remove(dto);
-            return DeleteResult.Deleted;
+            throw new NotImplementedException();
         }
 
-        public bool IdAlreadySet(long id)
+        public SaveResult InsertOrUpdate(ref PenaltyLogDTO log)
         {
-            return Container.Any(pl => pl.PenaltyLogId == id);
+            throw new NotImplementedException();
         }
 
         public IEnumerable<PenaltyLogDTO> LoadByAccount(long accountId)
@@ -41,15 +40,9 @@ namespace OpenNos.DAL.Mock
             return Container.Where(pl => pl.AccountId == accountId);
         }
 
-        public PenaltyLogDTO LoadById(int penaltylogId)
+        public PenaltyLogDTO LoadById(int relId)
         {
-            return Container.SingleOrDefault(p => p.PenaltyLogId == penaltylogId);
-        }
-
-        public void Update(PenaltyLogDTO penaltylog)
-        {
-            PenaltyLogDTO dto = LoadById(penaltylog.PenaltyLogId);
-            dto = penaltylog;
+            throw new NotImplementedException();
         }
 
         #endregion

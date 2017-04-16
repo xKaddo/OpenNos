@@ -15,6 +15,7 @@
 using OpenNos.DAL.Interface;
 using OpenNos.Data;
 using OpenNos.Data.Enums;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -24,23 +25,12 @@ namespace OpenNos.DAL.Mock
     {
         #region Methods
 
-        public DeleteResult Delete(long characterId, long relatedCharacterId)
+        public DeleteResult Delete(long id)
         {
             //CharacterDTO dto = LoadBySlot(accountId, characterSlot);
             //Container.Remove(dto);
             return DeleteResult.Deleted;
         }
-
-        public IList<CharacterRelationDTO> GetBlacklisted(long characterId)
-        {
-            return new List<CharacterRelationDTO>();
-        }
-
-        public IList<CharacterRelationDTO> GetFriends(long characterId)
-        {
-            return new List<CharacterRelationDTO>();
-        }
-
 
         public override CharacterRelationDTO Insert(CharacterRelationDTO dto)
         {
@@ -56,16 +46,20 @@ namespace OpenNos.DAL.Mock
                 dto = character;
                 return SaveResult.Updated;
             }
-            else
-            {
-                Insert(character);
-                return SaveResult.Inserted;
-            }
+            Insert(character);
+            return SaveResult.Inserted;
         }
+
+        public IEnumerable<CharacterRelationDTO> LoadAll(long characterId)
+        {
+            throw new NotImplementedException();
+        }
+
         public CharacterRelationDTO LoadById(long characterId)
         {
             return Container.SingleOrDefault(c => c.CharacterId == characterId);
         }
+
         #endregion
     }
 }

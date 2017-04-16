@@ -24,15 +24,13 @@ namespace OpenNos.DAL.Interface
 
         DeleteResult Delete(int penaltylogId);
 
-        bool IdAlreadySet(long id);
+        SaveResult InsertOrUpdate(ref PenaltyLogDTO log);
 
-        PenaltyLogDTO Insert(PenaltyLogDTO penaltylog);
+        IEnumerable<PenaltyLogDTO> LoadAll();
 
         IEnumerable<PenaltyLogDTO> LoadByAccount(long accountId);
 
-        PenaltyLogDTO LoadById(int penaltylogId);
-
-        void Update(PenaltyLogDTO penaltylog);
+        PenaltyLogDTO LoadById(int relId);
 
         #endregion
     }

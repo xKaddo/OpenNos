@@ -13,6 +13,7 @@
  */
 
 using OpenNos.Data;
+using System;
 using System.Collections.Generic;
 
 namespace OpenNos.DAL.Interface
@@ -21,7 +22,7 @@ namespace OpenNos.DAL.Interface
     {
         #region Methods
 
-        IEnumerable<CellonOptionDTO> GetOptionsByWearableInstanceId(long inventoryitemId);
+        IEnumerable<CellonOptionDTO> GetOptionsByWearableInstanceId(Guid inventoryitemId);
 
         #endregion
     }

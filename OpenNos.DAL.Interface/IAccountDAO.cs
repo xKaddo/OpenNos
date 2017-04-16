@@ -14,7 +14,6 @@
 
 using OpenNos.Data;
 using OpenNos.Data.Enums;
-using System;
 
 namespace OpenNos.DAL.Interface
 {
@@ -28,13 +27,9 @@ namespace OpenNos.DAL.Interface
 
         AccountDTO LoadById(long accountId);
 
-        AccountDTO LoadByName(string Name);
+        AccountDTO LoadByName(string name);
 
-        void LogIn(string name);
-
-        void UpdateLastSessionAndIp(string name, int session, string ip);
-
-        void WriteGeneralLog(long accountId, string ipAddress, Nullable<long> characterId, string logType, string logData);
+        void WriteGeneralLog(long accountId, string ipAddress, long? characterId, string logType, string logData);
 
         #endregion
     }

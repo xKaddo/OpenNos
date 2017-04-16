@@ -30,6 +30,11 @@ namespace OpenNos.DAL.Mock
 
         #region Methods
 
+        public void Insert(List<DropDTO> drops)
+        {
+            throw new NotImplementedException();
+        }
+
         public List<DropDTO> LoadAll()
         {
             return _mockContainer.ToList().Select(e => MapEntity(e)).ToList();

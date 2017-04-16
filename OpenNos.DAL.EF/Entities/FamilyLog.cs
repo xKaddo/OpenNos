@@ -12,6 +12,10 @@
  * GNU General Public License for more details.
  */
 
+using OpenNos.Domain;
+using System;
+using System.ComponentModel.DataAnnotations;
+
 namespace OpenNos.DAL.EF
 {
     public class FamilyLog
@@ -22,7 +26,14 @@ namespace OpenNos.DAL.EF
 
         public long FamilyId { get; set; }
 
+        [MaxLength(255)]
+        public string FamilyLogData { get; set; }
+
         public long FamilyLogId { get; set; }
+
+        public FamilyLogType FamilyLogType { get; set; }
+
+        public DateTime Timestamp { get; set; }
 
         #endregion
     }

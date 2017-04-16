@@ -12,22 +12,23 @@
  * GNU General Public License for more details.
  */
 
+using OpenNos.DAL.EF.Entities;
+using System.Data.Entity;
+using System.Data.Entity.ModelConfiguration.Conventions;
+
 namespace OpenNos.DAL.EF.DB
 {
-    using System.Data.Entity;
-    using System.Data.Entity.ModelConfiguration.Conventions;
-
-    public partial class OpenNosContext : DbContext
+    public class OpenNosContext : DbContext
     {
         #region Instantiation
 
         public OpenNosContext() : base("name=OpenNosContext")
         {
-            this.Configuration.LazyLoadingEnabled = true;
+            Configuration.LazyLoadingEnabled = true;
 
             // --DO NOT DISABLE, otherwise the mapping will fail only one time access to database so
             // no proxy generation needed, its just slowing down in our case
-            this.Configuration.ProxyCreationEnabled = false;
+            Configuration.ProxyCreationEnabled = false;
         }
 
         #endregion
@@ -35,6 +36,10 @@ namespace OpenNos.DAL.EF.DB
         #region Properties
 
         public virtual DbSet<Account> Account { get; set; }
+
+        public virtual DbSet<BazaarItem> BazaarItem { get; set; }
+
+        public virtual DbSet<Card> Card { get; set; }
 
         public virtual DbSet<CellonOption> CellonOption { get; set; }
 
@@ -58,6 +63,8 @@ namespace OpenNos.DAL.EF.DB
 
         public virtual DbSet<Item> Item { get; set; }
 
+        public virtual DbSet<ItemCard> ItemCard { get; set; }
+
         public virtual DbSet<ItemInstance> ItemInstance { get; set; }
 
         public virtual DbSet<Mail> Mail { get; set; }
@@ -71,6 +78,10 @@ namespace OpenNos.DAL.EF.DB
         public virtual DbSet<MapType> MapType { get; set; }
 
         public virtual DbSet<MapTypeMap> MapTypeMap { get; set; }
+
+        public virtual DbSet<Mate> Mate { get; set; }
+
+        public virtual DbSet<MinilandObject> MinilandObject { get; set; }
 
         public virtual DbSet<NpcMonster> NpcMonster { get; set; }
 
@@ -90,6 +101,8 @@ namespace OpenNos.DAL.EF.DB
 
         public virtual DbSet<RespawnMapType> RespawnMapType { get; set; }
 
+        public virtual DbSet<ScriptedInstance> ScriptedInstance { get; set; }
+
         public virtual DbSet<Shop> Shop { get; set; }
 
         public virtual DbSet<ShopItem> ShopItem { get; set; }
@@ -97,6 +110,10 @@ namespace OpenNos.DAL.EF.DB
         public virtual DbSet<ShopSkill> ShopSkill { get; set; }
 
         public virtual DbSet<Skill> Skill { get; set; }
+
+        public virtual DbSet<SkillCard> SkillCard { get; set; }
+
+        public virtual DbSet<StaticBonus> StaticBonus { get; set; }
 
         public virtual DbSet<Teleporter> Teleporter { get; set; }
 
@@ -130,12 +147,6 @@ namespace OpenNos.DAL.EF.DB
                 .HasForeignKey(e => e.AccountId)
                 .WillCascadeOnDelete(false);
 
-            modelBuilder.Entity<Account>()
-                .HasMany(e => e.GeneralLog)
-                .WithRequired(e => e.Account)
-                .HasForeignKey(e => e.AccountId)
-                .WillCascadeOnDelete(false);
-
             modelBuilder.Entity<Character>()
                 .Property(e => e.Name)
                 .IsUnicode(false);
@@ -147,7 +158,37 @@ namespace OpenNos.DAL.EF.DB
                 .WillCascadeOnDelete(false);
 
             modelBuilder.Entity<Character>()
+                .HasMany(e => e.Mate)
+                .WithRequired(e => e.Character)
+                .HasForeignKey(e => e.CharacterId)
+                .WillCascadeOnDelete(false);
+
+            modelBuilder.Entity<Character>()
                 .HasMany(e => e.CharacterSkill)
+                .WithRequired(e => e.Character)
+                .HasForeignKey(e => e.CharacterId)
+                .WillCascadeOnDelete(false);
+
+            modelBuilder.Entity<Character>()
+                .HasMany(e => e.StaticBonus)
+                .WithRequired(e => e.Character)
+                .HasForeignKey(e => e.CharacterId)
+                .WillCascadeOnDelete(false);
+
+            modelBuilder.Entity<Character>()
+                .HasMany(e => e.CharacterRelation1)
+                .WithRequired(e => e.Character1)
+                .HasForeignKey(e => e.CharacterId)
+                .WillCascadeOnDelete(false);
+
+            modelBuilder.Entity<Character>()
+                .HasMany(e => e.CharacterRelation2)
+                .WithRequired(e => e.Character2)
+                .HasForeignKey(e => e.RelatedCharacterId)
+                .WillCascadeOnDelete(false);
+
+            modelBuilder.Entity<Character>()
+                .HasMany(e => e.StaticBuff)
                 .WithRequired(e => e.Character)
                 .HasForeignKey(e => e.CharacterId)
                 .WillCascadeOnDelete(false);
@@ -170,6 +211,12 @@ namespace OpenNos.DAL.EF.DB
                 .WillCascadeOnDelete(false);
 
             modelBuilder.Entity<Character>()
+                .HasMany(e => e.MinilandObject)
+                .WithRequired(e => e.Character)
+                .HasForeignKey(e => e.CharacterId)
+                .WillCascadeOnDelete(false);
+
+            modelBuilder.Entity<Character>()
                 .HasMany(e => e.Mail1)
                 .WithRequired(e => e.Receiver)
                 .HasForeignKey(e => e.ReceiverId)
@@ -181,10 +228,28 @@ namespace OpenNos.DAL.EF.DB
                 .HasForeignKey(e => e.FamilyId)
                 .WillCascadeOnDelete(false);
 
-            modelBuilder.Entity<Character>()
-                .HasOptional(e => e.FamilyCharacter)
-                .WithMany(e => e.Character)
-                .HasForeignKey(e => e.FamilyCharacterId)
+            modelBuilder.Entity<FamilyCharacter>()
+                .HasRequired(e => e.Character)
+                .WithMany(e => e.FamilyCharacter)
+                .HasForeignKey(e => e.CharacterId)
+                .WillCascadeOnDelete(false);
+
+            modelBuilder.Entity<BazaarItem>()
+                .HasRequired(e => e.Character)
+                .WithMany(e => e.BazaarItem)
+                .HasForeignKey(e => e.SellerId)
+                .WillCascadeOnDelete(false);
+
+            modelBuilder.Entity<BazaarItem>()
+                .HasRequired(e => e.ItemInstance)
+                .WithMany(e => e.BazaarItem)
+                .HasForeignKey(e => e.ItemInstanceId)
+                .WillCascadeOnDelete(false);
+
+            modelBuilder.Entity<MinilandObject>()
+                .HasOptional(e => e.ItemInstance)
+                .WithMany(e => e.MinilandObject)
+                .HasForeignKey(e => e.ItemInstanceId)
                 .WillCascadeOnDelete(false);
 
             modelBuilder.Entity<FamilyCharacter>()
@@ -283,8 +348,38 @@ namespace OpenNos.DAL.EF.DB
                 .WillCascadeOnDelete(false);
 
             modelBuilder.Entity<Map>()
+               .HasMany(e => e.ScriptedInstance)
+               .WithRequired(e => e.Map)
+               .HasForeignKey(e => e.MapId)
+               .WillCascadeOnDelete(false);
+
+            modelBuilder.Entity<Map>()
                 .HasMany(e => e.Teleporter)
                 .WithRequired(e => e.Map)
+                .WillCascadeOnDelete(false);
+
+            modelBuilder.Entity<SkillCard>()
+                .HasRequired(e => e.Skill)
+                .WithMany(e => e.SkillCard)
+                .HasForeignKey(e => e.SkillVNum)
+                .WillCascadeOnDelete(false);
+
+            modelBuilder.Entity<SkillCard>()
+                .HasRequired(e => e.Card)
+                .WithMany(e => e.SkillCard)
+                .HasForeignKey(e => e.CardId)
+                .WillCascadeOnDelete(false);
+
+            modelBuilder.Entity<ItemCard>()
+                .HasRequired(e => e.Item)
+                .WithMany(e => e.ItemCard)
+                .HasForeignKey(e => e.ItemVNum)
+                .WillCascadeOnDelete(false);
+
+            modelBuilder.Entity<ItemCard>()
+                .HasRequired(e => e.Card)
+                .WithMany(e => e.ItemCard)
+                .HasForeignKey(e => e.CardId)
                 .WillCascadeOnDelete(false);
 
             modelBuilder.Entity<MapTypeMap>()
@@ -324,6 +419,12 @@ namespace OpenNos.DAL.EF.DB
                 .HasMany(e => e.Drop)
                 .WithOptional(e => e.NpcMonster)
                 .HasForeignKey(e => e.MonsterVNum)
+                .WillCascadeOnDelete(false);
+
+            modelBuilder.Entity<NpcMonster>()
+                .HasMany(e => e.Mate)
+                .WithRequired(e => e.NpcMonster)
+                .HasForeignKey(e => e.NpcMonsterVNum)
                 .WillCascadeOnDelete(false);
 
             modelBuilder.Entity<NpcMonster>()

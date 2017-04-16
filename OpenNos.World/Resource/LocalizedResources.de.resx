@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -181,7 +181,6 @@
     <value>{0}: Kaufe &lt;{1} {2}: Stück &gt;</value>
   </data>
   <data name="BUY_ITEM_VALID" xml:space="preserve">
-    <value>Handel war erfolgreich</value>
   </data>
   <data name="CANT_MOVE" xml:space="preserve">
     <value>Du kannst dich in Kürze bewegen</value>
@@ -505,7 +504,6 @@
     <value>{0} Rezepte geladen!</value>
   </data>
   <data name="EXCHANGE_REFUSED" xml:space="preserve">
-    <value>Die Tauschanfrage wurde abgelehnt.</value>
   </data>
   <data name="REP_CHANGED" xml:space="preserve">
     <value>Dein Ruf wurde verändert.</value>
@@ -742,7 +740,6 @@
     <value>Keine Bolzen vorhanden - Kaufe welche im Shop.</value>
   </data>
   <data name="REFUSED_GROUP_REQUEST" xml:space="preserve">
-    <value>Die Gruppenanfrage wurde abgelehnt.</value>
   </data>
   <data name="CANT_EQUIP_DESTROYED_SP" xml:space="preserve">
     <value>Du kannst keine zerstörte Spezialistenkarte anziehen.</value>
@@ -805,10 +802,7 @@
     <value>Deine Strafzeit: {0}</value>
   </data>
   <data name="MUTED_PLURAL" xml:space="preserve">
-    <value>Du wurdest bestraft! Grund: {0} für {1} Stunden.</value>
-  </data>
-  <data name="MUTED_SINGULAR" xml:space="preserve">
-    <value>Du wurdest bestraft! Grund: {0} für 1 Stunde.</value>
+    <value>Du wurdest bestraft! Grund: {0} für {1} Minuten.</value>
   </data>
   <data name="SKILL_ALREADY_EXIST" xml:space="preserve">
     <value>Der Skill existiert bereits!</value>
@@ -992,5 +986,20 @@
   </data>
   <data name="MESSAGE_SENT_TO_CHARACTER" xml:space="preserve">
     <value>Sende die Nachricht an '{0}' im Channel {1}.</value>
+  </data>
+  <data name="CREATE_FAMILY" xml:space="preserve">
+    <value />
+  </data>
+  <data name="DISMISS_FAMILY" xml:space="preserve">
+    <value />
+  </data>
+  <data name="FAMILY_INVITATION_NOT_ALLOWED" xml:space="preserve">
+    <value />
+  </data>
+  <data name="FAMILY_NAME_ALREADY_USED" xml:space="preserve">
+    <value />
+  </data>
+  <data name="NOT_ALLOWED_KICK" xml:space="preserve">
+    <value />
   </data>
 </root>

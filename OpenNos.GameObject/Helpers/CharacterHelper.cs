@@ -14,8 +14,9 @@
 
 using OpenNos.Domain;
 using System;
+using System.Diagnostics.CodeAnalysis;
 
-namespace OpenNos.GameObject
+namespace OpenNos.GameObject.Helpers
 {
     public class CharacterHelper
     {
@@ -29,6 +30,7 @@ namespace OpenNos.GameObject
         private static int[,] _distDodge;
         private static int[,] _distRate;
         private static double[] _firstJobXpData;
+        private static double[] _heroXpData;
         private static int[,] _hitDef;
         private static int[,] _hitDodge;
         private static int[,] _hitRate;
@@ -65,6 +67,7 @@ namespace OpenNos.GameObject
             LoadSpeedData();
             LoadJobXPData();
             LoadSPXPData();
+            LoadHeroXpData();
             LoadXPData();
             LoadHPData();
             LoadMPData();
@@ -88,6 +91,18 @@ namespace OpenNos.GameObject
                     new CharacterHelper();
                 }
                 return _firstJobXpData;
+            }
+        }
+
+        public static double[] HeroXpData
+        {
+            get
+            {
+                if (_heroXpData == null)
+                {
+                    new CharacterHelper();
+                }
+                return _heroXpData;
             }
         }
 
@@ -226,21 +241,25 @@ namespace OpenNos.GameObject
                 case 6:
                     penalty = 0.9f;
                     break;
+
                 case 7:
                     penalty = 0.7f;
                     break;
+
                 case 8:
                     penalty = 0.5f;
                     break;
+
                 case 9:
                     penalty = 0.3f;
                     break;
+
                 default:
                     if (leveldifference > 9)
                     {
                         penalty = 0.1f;
                     }
-                    else if (leveldifference > 18 && leveldifference < 19)
+                    else if (leveldifference > 18)
                     {
                         penalty = 0.05f;
                     }
@@ -265,18 +284,23 @@ namespace OpenNos.GameObject
                 case 5:
                     penalty = 0.9f;
                     break;
+
                 case 6:
                     penalty = 0.7f;
                     break;
+
                 case 7:
                     penalty = 0.5f;
                     break;
+
                 case 8:
                     penalty = 0.3f;
                     break;
+
                 case 9:
                     penalty = 0.2f;
                     break;
+
                 default:
                     if (leveldifference > 9 && leveldifference < 19)
                     {
@@ -309,6 +333,72 @@ namespace OpenNos.GameObject
             return elementRate * elementRate * 3 + 50;
         }
 
+        public static int LoadFamilyXPData(byte familyLevel)
+        {
+            switch (familyLevel)
+            {
+                case 1:
+                    return 100000;
+
+                case 2:
+                    return 250000;
+
+                case 3:
+                    return 370000;
+
+                case 4:
+                    return 560000;
+
+                case 5:
+                    return 840000;
+
+                case 6:
+                    return 1260000;
+
+                case 7:
+                    return 1900000;
+
+                case 8:
+                    return 2850000;
+
+                case 9:
+                    return 3570000;
+
+                case 10:
+                    return 3830000;
+
+                case 11:
+                    return 4150000;
+
+                case 12:
+                    return 4750000;
+
+                case 13:
+                    return 5500000;
+
+                case 14:
+                    return 6500000;
+
+                case 15:
+                    return 7000000;
+
+                case 16:
+                    return 8500000;
+
+                case 17:
+                    return 9500000;
+
+                case 18:
+                    return 10000000;
+
+                case 19:
+                    return 17000000;
+
+                default:
+                    return 999999999;
+            }
+        }
+
         public static int MagicalDefence(ClassType @class, byte level)
         {
             return _magicalDef[(byte)@class, level];
@@ -336,22 +426,9 @@ namespace OpenNos.GameObject
 
         public static int RarityPoint(short rarity, short lvl)
         {
-            Random random = new Random();
             int p;
             switch (rarity)
             {
-                default:
-                    p = 0;
-                    break;
-
-                case -2:
-                    p = -2;
-                    break;
-
-                case -1:
-                    p = -1;
-                    break;
-
                 case 0:
                     p = 0;
                     break;
@@ -385,13 +462,17 @@ namespace OpenNos.GameObject
                     break;
 
                 case 8:
-                    p = ServerManager.RandomNumber(11, 16);
+                    p = 15;
+                    break;
+
+                default:
+                    p = rarity * 2;
                     break;
             }
-            return p * (lvl / 5) + 1;
+            return p * (lvl / 5 + 1);
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.StyleCop.CSharp.LayoutRules", "SA1503:CurlyBracketsMustNotBeOmitted", Justification = "Easier to read")]
+        [SuppressMessage("Microsoft.StyleCop.CSharp.LayoutRules", "SA1503:CurlyBracketsMustNotBeOmitted", Justification = "Easier to read")]
         public static int SlPoint(short spPoint, short mode)
         {
             try
@@ -555,6 +636,11 @@ namespace OpenNos.GameObject
                 case 15:
                     point += 173;
                     break;
+
+                    // lil easter egg ;)
+                    //default:
+                    //    point += 173 + (25 + (5 * (upgrade - 15)));
+                    //    break;
             }
 
             return point;
@@ -679,9 +765,20 @@ namespace OpenNos.GameObject
             return 0;
         }
 
-        private void LoadHPData()
+        private static void LoadHeroXpData()
         {
-            _hp = new int[4, 100];
+            // Load SpData
+            _heroXpData = new double[256];
+            _heroXpData[0] = 949560;
+            for (var i = 1; i < _heroXpData.Length; i++)
+            {
+                _heroXpData[i] = Convert.ToInt64(_heroXpData[i - 1] * 1.08);
+            }
+        }
+
+        private static void LoadHPData()
+        {
+            _hp = new int[4, 256];
 
             // Adventurer HP
             for (int i = 1; i < _hp.GetLength(1); i++)
@@ -739,7 +836,7 @@ namespace OpenNos.GameObject
             }
         }
 
-        private void LoadHPHealth()
+        private static void LoadHPHealth()
         {
             _hpHealth = new int[4];
             _hpHealth[(int)ClassType.Archer] = 60;
@@ -748,7 +845,7 @@ namespace OpenNos.GameObject
             _hpHealth[(int)ClassType.Magician] = 30;
         }
 
-        private void LoadHPHealthStand()
+        private static void LoadHPHealthStand()
         {
             _hpHealthStand = new int[4];
             _hpHealthStand[(int)ClassType.Archer] = 32;
@@ -757,11 +854,11 @@ namespace OpenNos.GameObject
             _hpHealthStand[(int)ClassType.Magician] = 20;
         }
 
-        private void LoadJobXPData()
+        private static void LoadJobXPData()
         {
             // Load JobData
             _firstJobXpData = new double[21];
-            _secondjobxpData = new double[81];
+            _secondjobxpData = new double[256];
             _firstJobXpData[0] = 2200;
             _secondjobxpData[0] = 17600;
             for (int i = 1; i < _firstJobXpData.Length; i++)
@@ -784,14 +881,13 @@ namespace OpenNos.GameObject
             }
         }
 
-        private void LoadMPData()
+        private static void LoadMPData()
         {
-            // ADVENTURER MP
-            _mp = new int[4, 101];
+            _mp = new int[4, 257];
 
+            // ADVENTURER MP
             _mp[(int)ClassType.Adventurer, 0] = 60;
             int baseAdventurer = 9;
-
             for (int i = 1; i < _mp.GetLength(1); i += 4)
             {
                 _mp[(int)ClassType.Adventurer, i] = _mp[(int)ClassType.Adventurer, i - 1] + baseAdventurer;
@@ -821,37 +917,37 @@ namespace OpenNos.GameObject
             }
         }
 
-        private void LoadMPHealth()
+        private static void LoadMPHealth()
         {
             _mpHealth = new int[4];
-            _mpHealth[(int)ClassType.Archer] = 50;
             _mpHealth[(int)ClassType.Adventurer] = 10;
             _mpHealth[(int)ClassType.Swordman] = 30;
+            _mpHealth[(int)ClassType.Archer] = 50;
             _mpHealth[(int)ClassType.Magician] = 80;
         }
 
-        private void LoadMPHealthStand()
+        private static void LoadMPHealthStand()
         {
             _mpHealthStand = new int[4];
-            _mpHealthStand[(int)ClassType.Archer] = 28;
             _mpHealthStand[(int)ClassType.Adventurer] = 5;
             _mpHealthStand[(int)ClassType.Swordman] = 16;
+            _mpHealthStand[(int)ClassType.Archer] = 28;
             _mpHealthStand[(int)ClassType.Magician] = 40;
         }
 
-        private void LoadSpeedData()
+        private static void LoadSpeedData()
         {
             _speedData = new byte[4];
-            _speedData[(int)ClassType.Archer] = 12;
             _speedData[(int)ClassType.Adventurer] = 11;
             _speedData[(int)ClassType.Swordman] = 11;
+            _speedData[(int)ClassType.Archer] = 12;
             _speedData[(int)ClassType.Magician] = 10;
         }
 
-        private void LoadSPXPData()
+        private static void LoadSPXPData()
         {
             // Load SpData
-            _spxpData = new double[99];
+            _spxpData = new double[256];
             _spxpData[0] = 15000;
             _spxpData[19] = 218000;
             for (int i = 1; i < 19; i++)
@@ -865,25 +961,25 @@ namespace OpenNos.GameObject
         }
 
         // TODO: Change or Verify
-        private void LoadStats()
+        private static void LoadStats()
         {
-            _minHit = new int[4, 100];
-            _maxHit = new int[4, 100];
-            _hitRate = new int[4, 100];
-            _criticalHitRate = new int[4, 100];
-            _criticalHit = new int[4, 100];
-            _minDist = new int[4, 100];
-            _maxDist = new int[4, 100];
-            _distRate = new int[4, 100];
-            _criticalDistRate = new int[4, 100];
-            _criticalDist = new int[4, 100];
-            _hitDef = new int[4, 100];
-            _hitDodge = new int[4, 100];
-            _distDef = new int[4, 100];
-            _distDodge = new int[4, 100];
-            _magicalDef = new int[4, 100];
+            _minHit = new int[4, 256];
+            _maxHit = new int[4, 256];
+            _hitRate = new int[4, 256];
+            _criticalHitRate = new int[4, 256];
+            _criticalHit = new int[4, 256];
+            _minDist = new int[4, 256];
+            _maxDist = new int[4, 256];
+            _distRate = new int[4, 256];
+            _criticalDistRate = new int[4, 256];
+            _criticalDist = new int[4, 256];
+            _hitDef = new int[4, 256];
+            _hitDodge = new int[4, 256];
+            _distDef = new int[4, 256];
+            _distDodge = new int[4, 256];
+            _magicalDef = new int[4, 256];
 
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < 256; i++)
             {
                 // ADVENTURER
                 _minHit[(int)ClassType.Adventurer, i] = i + 9; // approx
@@ -962,11 +1058,11 @@ namespace OpenNos.GameObject
             }
         }
 
-        private void LoadXPData()
+        private static void LoadXPData()
         {
             // Load XpData
-            _xpData = new double[100];
-            double[] v = new double[100];
+            _xpData = new double[256];
+            double[] v = new double[256];
             double var = 1;
             v[0] = 540;
             v[1] = 960;
@@ -1010,7 +1106,7 @@ namespace OpenNos.GameObject
                     _xpData[i] = Convert.ToInt64(_xpData[i - 1] + var * (i + 2) * (i + 2));
                 }
 
-                // Console.WriteLine($"LvL {i}: xpdata: {xpData[i - 1]} v: {v[i - 1]}");
+                // Console.WriteLine($"LvL {i}: xpdata: {_xpData[i - 1]} v: {v[i - 1]}");
             }
         }
 

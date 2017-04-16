@@ -15,6 +15,7 @@
 using OpenNos.DAL.EF.Helpers;
 using OpenNos.DAL.Interface;
 using OpenNos.Data;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -24,13 +25,13 @@ namespace OpenNos.DAL.EF
     {
         #region Methods
 
-        public IEnumerable<CellonOptionDTO> GetOptionsByWearableInstanceId(long wearableInstanceId)
+        public IEnumerable<CellonOptionDTO> GetOptionsByWearableInstanceId(Guid wearableInstanceId)
         {
             using (var context = DataAccessHelper.CreateContext())
             {
-                foreach (CellonOption CellonOptionobject in context.CellonOption.Where(i => i.WearableInstanceId.Equals(wearableInstanceId)))
+                foreach (CellonOption cellonOptionobject in context.CellonOption.Where(i => i.WearableInstanceId.Equals(wearableInstanceId)))
                 {
-                    yield return _mapper.Map<CellonOptionDTO>(CellonOptionobject);
+                    yield return _mapper.Map<CellonOptionDTO>(cellonOptionobject);
                 }
             }
         }

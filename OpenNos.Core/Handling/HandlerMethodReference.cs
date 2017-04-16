@@ -12,10 +12,11 @@
  * GNU General Public License for more details.
  */
 
+using OpenNos.Domain;
 using System;
 using System.Linq;
 
-namespace OpenNos.Core
+namespace OpenNos.Core.Handling
 {
     public class HandlerMethodReference
     {
@@ -28,6 +29,7 @@ namespace OpenNos.Core
             HandlerMethodAttribute = handlerMethodAttribute;
             Identification = HandlerMethodAttribute.Header;
             PassNonParseablePacket = false;
+            Authority = AuthorityType.User;
         }
 
         public HandlerMethodReference(Action<object, object> handlerMethod, IPacketHandler parentHandler, Type packetBaseParameterType)
@@ -38,26 +40,29 @@ namespace OpenNos.Core
             PacketHeaderAttribute headerAttribute = (PacketHeaderAttribute)PacketDefinitionParameterType.GetCustomAttributes(true).FirstOrDefault(ca => ca.GetType().Equals(typeof(PacketHeaderAttribute)));
             Identification = headerAttribute?.Identification;
             PassNonParseablePacket = headerAttribute?.PassNonParseablePacket ?? false;
+            Authority = headerAttribute?.Authority ?? AuthorityType.User;
         }
 
         #endregion
 
         #region Properties
 
-        public Action<object, object> HandlerMethod { get; set; }
+        public AuthorityType Authority { get; private set; }
 
-        public PacketAttribute HandlerMethodAttribute { get; set; }
+        public Action<object, object> HandlerMethod { get; private set; }
+
+        public PacketAttribute HandlerMethodAttribute { get; }
 
         /// <summary>
         /// Unique identification of the Packet by Header
         /// </summary>
-        public string Identification { get; set; }
+        public string Identification { get; private set; }
 
-        public Type PacketDefinitionParameterType { get; set; }
+        public Type PacketDefinitionParameterType { get; }
 
-        public IPacketHandler ParentHandler { get; set; }
+        public IPacketHandler ParentHandler { get; private set; }
 
-        public bool PassNonParseablePacket { get; set; }
+        public bool PassNonParseablePacket { get; private set; }
 
         #endregion
     }

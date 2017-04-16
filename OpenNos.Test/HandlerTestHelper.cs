@@ -11,6 +11,7 @@ using OpenNos.WebApi.Reference;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Threading;
 
 namespace OpenNos.Test
@@ -30,12 +31,11 @@ namespace OpenNos.Test
             FakeNetworkClient client = new FakeNetworkClient();
             _sessionManager.AddSession(client);
 
-            long id = ServerManager.RandomNumber(0, 999999);
-            AccountDTO account = new AccountDTO()
+            long id = ServerManager.Instance.RandomNumber(0, 999999);
+            AccountDTO account = new AccountDTO
             {
                 AccountId = id,
-                Authority = AuthorityType.Admin,
-                LastSession = 12345,
+                Authority = AuthorityType.GameMaster,
                 Name = "test" + id,
                 Password = "ee26b0dd4af7e749aa1a8ee3c10ae9923f618980772e473f8819a5d4940e0db27ac185f8a0e1d5f84f88bc887fd67b143732c304cc5fa9ad8e6f57f50028a8ff"
             };
@@ -76,7 +76,7 @@ namespace OpenNos.Test
 
         public static FakeNetworkClient InitializeTestEnvironment()
         {
-            System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = System.Globalization.CultureInfo.GetCultureInfo("en-US");
+            CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.GetCultureInfo("en-US");
 
             // initialize Logger
             Logger.InitializeLogger(LogManager.GetLogger(typeof(BasicPacketHandlerTest)));
@@ -90,7 +90,7 @@ namespace OpenNos.Test
             CreateServerSkills();
 
             // initialize servermanager
-            ServerManager.Instance.Initialize("127.0.0.1", 1234);
+            ServerManager.Instance.Initialize();
 
             // initialize PacketSerialization
             PacketFactory.Initialize<WalkPacket>();
@@ -207,7 +207,7 @@ namespace OpenNos.Test
 
         private static void CreateServerItems()
         {
-            DAOFactory.ItemDAO.Insert(new ItemDTO()
+            DAOFactory.ItemDAO.Insert(new ItemDTO
             {
                 VNum = 1,
                 Class = 1,
@@ -224,12 +224,12 @@ namespace OpenNos.Test
                 Name = "Wooden Stick",
                 Price = 70
             });
-            DAOFactory.ItemDAO.Insert(new ItemDTO()
+            DAOFactory.ItemDAO.Insert(new ItemDTO
             {
                 VNum = 8,
                 EquipmentSlot = EquipmentType.SecondaryWeapon
             });
-            DAOFactory.ItemDAO.Insert(new ItemDTO()
+            DAOFactory.ItemDAO.Insert(new ItemDTO
             {
                 VNum = 12,
                 EquipmentSlot = EquipmentType.Armor
@@ -238,7 +238,7 @@ namespace OpenNos.Test
 
         private static void CreateServerMaps()
         {
-            MapDTO testingMap = new MapDTO()
+            MapDTO testingMap = new MapDTO
             {
                 MapId = 1,
                 Music = 1,
@@ -267,29 +267,29 @@ namespace OpenNos.Test
 
         private static void CreateServerSkills()
         {
-            DAOFactory.SkillDAO.Insert(new SkillDTO()
+            DAOFactory.SkillDAO.Insert(new SkillDTO
             {
                 SkillVNum = 200,
-                CastId = 0,
+                CastId = 0
             });
-            DAOFactory.SkillDAO.Insert(new SkillDTO()
+            DAOFactory.SkillDAO.Insert(new SkillDTO
             {
                 SkillVNum = 201,
-                CastId = 1,
+                CastId = 1
             });
-            DAOFactory.SkillDAO.Insert(new SkillDTO()
+            DAOFactory.SkillDAO.Insert(new SkillDTO
             {
                 SkillVNum = 209,
-                CastId = 2,
+                CastId = 2
             });
         }
 
         private static void RegisterMappings()
         {
             // register mappings for items
-            DAOFactory.IteminstanceDao.RegisterMapping(typeof(SpecialistInstance));
-            DAOFactory.IteminstanceDao.RegisterMapping(typeof(WearableInstance));
-            DAOFactory.IteminstanceDao.InitializeMapper(typeof(ItemInstance));
+            DAOFactory.IteminstanceDAO.RegisterMapping(typeof(SpecialistInstance));
+            DAOFactory.IteminstanceDAO.RegisterMapping(typeof(WearableInstance));
+            DAOFactory.IteminstanceDAO.InitializeMapper(typeof(ItemInstance));
 
             // entities
             DAOFactory.AccountDAO.RegisterMapping(typeof(Account)).InitializeMapper();

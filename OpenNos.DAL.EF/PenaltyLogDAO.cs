@@ -13,6 +13,7 @@
  */
 
 using OpenNos.Core;
+using OpenNos.DAL.EF.DB;
 using OpenNos.DAL.EF.Helpers;
 using OpenNos.DAL.Interface;
 using OpenNos.Data;
@@ -51,38 +52,40 @@ namespace OpenNos.DAL.EF
             }
         }
 
-        public bool IdAlreadySet(long id)
+        public SaveResult InsertOrUpdate(ref PenaltyLogDTO log)
         {
             try
             {
                 using (var context = DataAccessHelper.CreateContext())
                 {
-                    return context.PenaltyLog.Any(gl => gl.PenaltyLogId == id);
+                    int id = log.PenaltyLogId;
+                    PenaltyLog entity = context.PenaltyLog.FirstOrDefault(c => c.PenaltyLogId.Equals(id));
+
+                    if (entity == null)
+                    {
+                        log = Insert(log, context);
+                        return SaveResult.Inserted;
+                    }
+
+                    log = Update(entity, log, context);
+                    return SaveResult.Updated;
                 }
             }
             catch (Exception e)
             {
-                Logger.Error(e);
-                return false;
+                Logger.Log.Error(string.Format(Language.Instance.GetMessageFromKey("UPDATE_PENALTYLOG_ERROR"), log.PenaltyLogId, e.Message), e);
+                return SaveResult.Error;
             }
         }
 
-        public PenaltyLogDTO Insert(PenaltyLogDTO penaltylog)
+        public IEnumerable<PenaltyLogDTO> LoadAll()
         {
-            try
+            using (var context = DataAccessHelper.CreateContext())
             {
-                using (var context = DataAccessHelper.CreateContext())
+                foreach (PenaltyLog entity in context.PenaltyLog)
                 {
-                    PenaltyLog entity = _mapper.Map<PenaltyLog>(penaltylog);
-                    context.PenaltyLog.Add(entity);
-                    context.SaveChanges();
-                    return _mapper.Map<PenaltyLogDTO>(penaltylog);
+                    yield return _mapper.Map<PenaltyLogDTO>(entity);
                 }
-            }
-            catch (Exception e)
-            {
-                Logger.Error(e);
-                return null;
             }
         }
 
@@ -97,13 +100,13 @@ namespace OpenNos.DAL.EF
             }
         }
 
-        public PenaltyLogDTO LoadById(int penaltylogId)
+        public PenaltyLogDTO LoadById(int relId)
         {
             try
             {
                 using (var context = DataAccessHelper.CreateContext())
                 {
-                    return _mapper.Map<PenaltyLogDTO>(context.PenaltyLog.FirstOrDefault(s => s.PenaltyLogId.Equals(penaltylogId)));
+                    return _mapper.Map<PenaltyLogDTO>(context.PenaltyLog.FirstOrDefault(s => s.PenaltyLogId.Equals(relId)));
                 }
             }
             catch (Exception e)
@@ -113,25 +116,22 @@ namespace OpenNos.DAL.EF
             }
         }
 
-        public void Update(PenaltyLogDTO penaltylog)
+        private PenaltyLogDTO Insert(PenaltyLogDTO penaltylog, OpenNosContext context)
         {
-            try
+            PenaltyLog entity = _mapper.Map<PenaltyLog>(penaltylog);
+            context.PenaltyLog.Add(entity);
+            context.SaveChanges();
+            return _mapper.Map<PenaltyLogDTO>(entity);
+        }
+
+        private PenaltyLogDTO Update(PenaltyLog entity, PenaltyLogDTO penaltylog, OpenNosContext context)
+        {
+            if (entity != null)
             {
-                using (var context = DataAccessHelper.CreateContext())
-                {
-                    PenaltyLog result = context.PenaltyLog.FirstOrDefault(c => c.AccountId == penaltylog.AccountId && c.PenaltyLogId == penaltylog.PenaltyLogId);
-                    if (result != null)
-                    {
-                        penaltylog.PenaltyLogId = result.PenaltyLogId;
-                        _mapper.Map(penaltylog, result);
-                        context.SaveChanges();
-                    }
-                }
+                _mapper.Map(penaltylog, entity);
+                context.SaveChanges();
             }
-            catch (Exception e)
-            {
-                Logger.Error(e);
-            }
+            return _mapper.Map<PenaltyLogDTO>(entity);
         }
 
         #endregion

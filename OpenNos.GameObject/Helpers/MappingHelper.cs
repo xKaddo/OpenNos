@@ -18,18 +18,12 @@ namespace OpenNos.GameObject
 {
     public static class MappingHelper
     {
-        #region Members
-
-        private static Dictionary<int, int> _guriItemEffects;
-
-        #endregion
-
         #region Instantiation
 
         static MappingHelper()
         {
             // intialize hardcode in waiting for better solution
-            _guriItemEffects = new Dictionary<int, int>
+            GuriItemEffects = new Dictionary<int, int>
             {
                 {859, 1343},
                 {860, 1344},
@@ -49,13 +43,7 @@ namespace OpenNos.GameObject
 
         #region Properties
 
-        public static Dictionary<int, int> GuriItemEffects
-        {
-            get
-            {
-                return _guriItemEffects;
-            }
-        }
+        public static Dictionary<int, int> GuriItemEffects { get; }
 
         #endregion
     }

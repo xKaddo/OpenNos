@@ -157,7 +157,7 @@
     <value>If^you^have^problems^read^Troubleshooting.md</value>
   </data>
   <data name="BN2" xml:space="preserve">
-    <value>Need^help?^Use^our^official^discord^server:^https://discordapp.com/invite/N8eqPUh</value>
+    <value>Need^help?^Use^our^official^discord^server:^https://discordapp.com/qdPMDv5</value>
   </data>
   <data name="BN3" xml:space="preserve">
     <value>Greetings^from^OpenNos^Team!</value>
@@ -653,10 +653,10 @@
     <value>Seeds of power used!</value>
   </data>
   <data name="ASK_REVIVE" xml:space="preserve">
-    <value>Do you want to revive? it will cost you 10 power seeds</value>
+    <value>Do you want to revive? It will cost you 10 power seeds</value>
   </data>
   <data name="ASK_REVIVE_FREE" xml:space="preserve">
-    <value>Do you want to revive? it will be free</value>
+    <value>Do you want to revive? It will be free</value>
   </data>
   <data name="LOSE_DIGNITY" xml:space="preserve">
     <value>You've lost {0} dignity</value>
@@ -684,9 +684,6 @@
   </data>
   <data name="MUTED_MALE" xml:space="preserve">
     <value>I was a bad boy, soo i got punished!</value>
-  </data>
-  <data name="MUTED_SINGULAR" xml:space="preserve">
-    <value>You have been muted! Reason: {0} For: 1 hour</value>
   </data>
   <data name="MUTE_END" xml:space="preserve">
     <value>Your punishment has ended!</value>
@@ -794,7 +791,7 @@
     <value>{0} refused your group request.</value>
   </data>
   <data name="MUTED_PLURAL" xml:space="preserve">
-    <value>You have been muted! Reason: {0} For: {1} hours</value>
+    <value>You have been muted! Reason: {0} For: {1} minutes</value>
   </data>
   <data name="GROUP_ADMIN" xml:space="preserve">
     <value>You're group admin!</value>
@@ -1001,7 +998,7 @@
     <value>Your description has been updated!</value>
   </data>
   <data name="NOT_ENOUGH_ITEMS" xml:space="preserve">
-    <value>You need atleast {0}x{1}</value>
+    <value>You need at least {0} x {1}</value>
   </data>
   <data name="BANNED" xml:space="preserve">
     <value>This account has been locked to {0} for {1}.</value>
@@ -1134,5 +1131,287 @@
   </data>
   <data name="ANGEL" xml:space="preserve">
     <value>Angel</value>
+  </data>
+  <data name="CREATE_FAMILY" xml:space="preserve">
+    <value>Do you want to create your family?</value>
+  </data>
+  <data name="DISMISS_FAMILY" xml:space="preserve">
+    <value>Do you want to dismiss yur family?</value>
+  </data>
+  <data name="FAMILY_INVITATION_NOT_ALLOWED" xml:space="preserve">
+    <value>You don't have permission to invite players!</value>
+  </data>
+  <data name="FAMILY_NAME_ALREADY_USED" xml:space="preserve">
+    <value>This family name is already in use!</value>
+  </data>
+  <data name="GROUP_MEMBER_ALREADY_IN_FAMILY" xml:space="preserve">
+    <value>Someone in party already has family!</value>
+  </data>
+  <data name="NOT_ALLOWED_KICK" xml:space="preserve">
+    <value>You don't have permission to kick players!</value>
+  </data>
+  <data name="FAMILY_FOUNDED" xml:space="preserve">
+    <value>The family {0} was founded!</value>
+  </data>
+  <data name="FAMILY_GROUP_NOT_FULL" xml:space="preserve">
+    <value>You can't create family without full group!</value>
+  </data>
+  <data name="FAMILY_INVITED" xml:space="preserve">
+    <value>Player {0} has been invited!</value>
+  </data>
+  <data name="ASK_FAMILY_INVITED" xml:space="preserve">
+    <value>You've been invited to family {0}, do you want to join?</value>
+  </data>
+  <data name="FAMILY_JOINED" xml:space="preserve">
+    <value>Player {0} joined the family {1}!</value>
+  </data>
+  <data name="FAMILY_KICKED" xml:space="preserve">
+    <value>Player {0}  has been kicked out of the family!</value>
+  </data>
+  <data name="LANGUAGE_REQUIRED" xml:space="preserve">
+    <value>Only {0} language allowed !</value>
+  </data>
+  <data name="ASK_REVIVE_PVP" xml:space="preserve">
+    <value>Do you want to revive? It will cost you 100 Gold</value>
+  </data>
+  <data name="LOSE_REP" xml:space="preserve">
+    <value>You've lost {0} reputation</value>
+  </data>
+  <data name="ACT4_PVP_DIE" xml:space="preserve">
+    <value>You were killed by an enemy! Due to the curse of the Frozen Crown, you can't be revived for 30 seconds!</value>
+  </data>
+  <data name="EFFECT_ACTIVATED" xml:space="preserve">
+    <value>The {0} effect has been actived!</value>
+  </data>
+  <data name="INFO_BAZAAR" xml:space="preserve">
+    <value>You cannot open the bazaar because you do not possess the required object.</value>
+  </data>
+  <data name="NOTICE_BAZAAR" xml:space="preserve">
+    <value>Warning, you can be attacked by monsters when you use the bazaar!</value>
+  </data>
+  <data name="OBJECT_IN_BAZAAR" xml:space="preserve">
+    <value>Your item has been added on the bazaar!</value>
+  </data>
+  <data name="REMOVE_FROM_BAZAAR" xml:space="preserve">
+    <value>The sale is completed, you receive gold: {0}.</value>
+  </data>
+  <data name="STATE_CHANGED" xml:space="preserve">
+    <value>The sale was interrupted because the item is no longer available!</value>
+  </data>
+  <data name="LOGIN_MEDAL" xml:space="preserve">
+    <value>The BazaarMedal is currently active.</value>
+  </data>
+  <data name="GROUP_SHARE_INFO" xml:space="preserve">
+    <value>You sent a request to share the point of return with the members of your group.</value>
+  </data>
+  <data name="INVITED_YOU_SHARE" xml:space="preserve">
+    <value>Do you want to set as a return point from : {0} ?</value>
+  </data>
+  <data name="CHANGED_SHARE" xml:space="preserve">
+    <value>You have changed the common point of return of the members of the group.</value>
+  </data>
+  <data name="REFUSED_SHARE" xml:space="preserve">
+    <value>You refused to share the point of return with the group members.</value>
+  </data>
+  <data name="LIMIT_EXCEEDED" xml:space="preserve">
+    <value>You can't add more item on the bazaar because the limit is exceeded</value>
+  </data>
+  <data name="PRICE_EXCEEDED" xml:space="preserve">
+    <value>The price limit is exceeded.</value>
+  </data>
+  <data name="ASSISTANT" xml:space="preserve">
+    <value>Assistant</value>
+  </data>
+  <data name="BAZAR_LOADED" xml:space="preserve">
+    <value>Bazaar Loaded!</value>
+  </data>
+  <data name="CHANNEL" xml:space="preserve">
+    <value>channel</value>
+  </data>
+  <data name="FAMILYCALL" xml:space="preserve">
+    <value>familycall</value>
+  </data>
+  <data name="HEAD" xml:space="preserve">
+    <value>Head</value>
+  </data>
+  <data name="MANAGER" xml:space="preserve">
+    <value>Manager</value>
+  </data>
+  <data name="MEMBER" xml:space="preserve">
+    <value>Member</value>
+  </data>
+  <data name="ALREADY_TWO_ASSISTANT" xml:space="preserve">
+    <value>You already have two assistants!</value>
+  </data>
+  <data name="ASSISTANT_UNDEMOTABLE" xml:space="preserve">
+    <value>You cannot demote another assistant!</value>
+  </data>
+  <data name="HEAD_UNDEMOTABLE" xml:space="preserve">
+    <value>You cannot demote the family head!</value>
+  </data>
+  <data name="NOT_FAMILY_HEAD" xml:space="preserve">
+    <value>You are not the family head!</value>
+  </data>
+  <data name="ONLY_PROMOTE_ASSISTANT" xml:space="preserve">
+    <value>You can only promote an assistant to the family head!</value>
+  </data>
+  <data name="PLAYER_OFFLINE" xml:space="preserve">
+    <value>Player not online!</value>
+  </data>
+  <data name="CHARACTER_FAMILY_LOGGED_IN" xml:space="preserve">
+    <value>{0}({1}) logged in!</value>
+  </data>
+  <data name="CANT_CHANGE_MESSAGE" xml:space="preserve">
+    <value>You already modified your message today. Retry tomorrow!</value>
+  </data>
+  <data name="NO_HANDLER_GURI" xml:space="preserve">
+    <value>No guri handler for: {0}</value>
+  </data>
+  <data name="ACCEPTED_SHARE" xml:space="preserve">
+    <value>You accepted point share with {0}!</value>
+  </data>
+  <data name="HORN_APPEAR" xml:space="preserve">
+    <value>The hunt of the dark horn began.</value>
+  </data>
+  <data name="HORN_DISAPEAR" xml:space="preserve">
+    <value>The dark horn is gone.</value>
+  </data>
+  <data name="LOD_CLOSED" xml:space="preserve">
+    <value>The Land Of The Dead is closed.</value>
+  </data>
+  <data name="LOD_REQUIERE_LVL" xml:space="preserve">
+    <value>You need to be level 55 minimum to join the Land Of The Dead.</value>
+  </data>
+  <data name="NEED_FAMILY" xml:space="preserve">
+    <value>You cannot join the Land Of The Dead without family.</value>
+  </data>
+  <data name="NOT_ENOUGH_SAVER" xml:space="preserve">
+    <value>You don't have enough Fountain of Saviour to resurrect.</value>
+  </data>
+  <data name="INSTANTBATTLE_MONSTERS_WAVE" xml:space="preserve">
+    <value>The wave of monsters is preparing to arrive</value>
+  </data>
+  <data name="INSTANTBATTLE_SECONDS_REMAINING" xml:space="preserve">
+    <value>The instant battle will be closed in {0} seconds.</value>
+  </data>
+  <data name="INSTANTBATTLE_SUCCEEDED" xml:space="preserve">
+    <value>You won the instant battle!</value>
+  </data>
+  <data name="INSTANTBATTLE_QUESTION" xml:space="preserve">
+    <value>Do you want to join the instant battle ?</value>
+  </data>
+  <data name="INSTANTBATTLE_SECONDS" xml:space="preserve">
+    <value>The instant battle will begin in {0} seconds.</value>
+  </data>
+  <data name="INSTANTBATTLE_STARTED" xml:space="preserve">
+    <value>The instant battle has begin!</value>
+  </data>
+  <data name="MINILAND_VISITOR" xml:space="preserve">
+    <value>Total visits: {0}, Daily visits: {1}</value>
+  </data>
+  <data name="REPUT_INCREASE" xml:space="preserve">
+    <value>Reputation has been increased.</value>
+  </data>
+  <data name="WIN_MONEY" xml:space="preserve">
+    <value>Money: +{0}</value>
+  </data>
+  <data name="WIN_REPUT" xml:space="preserve">
+    <value>Reputation: +{0}</value>
+  </data>
+  <data name="WIN_SP_POINT" xml:space="preserve">
+    <value>SP points: +{0}</value>
+  </data>
+  <data name="INSTANTBATTLE_MINUTES" xml:space="preserve">
+    <value>The instant battle will begin in {0} minutes.</value>
+  </data>
+  <data name="INSTANTBATTLE_MINUTES_REMAINING" xml:space="preserve">
+    <value>The instant battle will be closed in {0} minutes.</value>
+  </data>
+  <data name="INSTANTBATTLE_MONSTERS_APPEAR" xml:space="preserve">
+    <value>The monsters are here!</value>
+  </data>
+  <data name="INSTANTBATTLE_MONSTERS_HERE" xml:space="preserve">
+    <value>Reinforcements are here.</value>
+  </data>
+  <data name="INSTANTBATTLE_MONSTERS_INCOMING" xml:space="preserve">
+    <value>Monsters incoming!</value>
+  </data>
+  <data name="MINILAND_CLOSED_BY_FRIEND" xml:space="preserve">
+    <value>The mini-land has been closed.</value>
+  </data>
+  <data name="MINILAND_INFO_CHANGED" xml:space="preserve">
+    <value>Mini-land info changed</value>
+  </data>
+  <data name="MINILAND_LOCK" xml:space="preserve">
+    <value>The mini-land is now locked.</value>
+  </data>
+  <data name="MINILAND_NEED_LOCK" xml:space="preserve">
+    <value>You need to lock your mini-land to make modifications.</value>
+  </data>
+  <data name="MINILAND_PRIVATE" xml:space="preserve">
+    <value>The mini-land is now private.</value>
+  </data>
+  <data name="MINILAND_PUBLIC" xml:space="preserve">
+    <value>The mini-land is now public.</value>
+  </data>
+  <data name="SUPPORT" xml:space="preserve">
+    <value>Support</value>
+  </data>
+  <data name="ALREADY_PET_IN_TEAM" xml:space="preserve">
+    <value>Your NosMate is already on the team.</value>
+  </data>
+  <data name="ASK_KICK_PET" xml:space="preserve">
+    <value>Do you want to refer your NosMate to the Mini-Land?</value>
+  </data>
+  <data name="ASK_RELEASE_PET" xml:space="preserve">
+    <value>Do you want to take out your NosMate ?</value>
+  </data>
+  <data name="GET_PET_PLACES" xml:space="preserve">
+    <value>Right now, you can have more NosMate.</value>
+  </data>
+  <data name="PET_CAN_PICK_UP" xml:space="preserve">
+    <value>Now, your NosMate can drop items.</value>
+  </data>
+  <data name="PET_HIGHER_LEVEL" xml:space="preserve">
+    <value>Your NosMate level is too much high to be equiped.</value>
+  </data>
+  <data name="PET_IN_TEAM_UNRELEASABLE" xml:space="preserve">
+    <value>You can't release your NosMate if you already equipe him.</value>
+  </data>
+  <data name="PET_KICKED" xml:space="preserve">
+    <value>Your NosMate has been refer to your Mini-Land.</value>
+  </data>
+  <data name="PET_LEAVE_BEAD" xml:space="preserve">
+    <value>Your NosMate is out the bead!</value>
+  </data>
+  <data name="PET_RELEASED" xml:space="preserve">
+    <value>Your NosMate is now free.</value>
+  </data>
+  <data name="PET_STORED" xml:space="preserve">
+    <value>Your NosMate is now enclose into the bead.</value>
+  </data>
+  <data name="PET_SUMMONABLE" xml:space="preserve">
+    <value>You can summon your NosMate right now at any time.</value>
+  </data>
+  <data name="NEW_NAME_PET" xml:space="preserve">
+    <value>Your NosMate name's has been changed</value>
+  </data>
+  <data name="HEROXP_RATE_CHANGED" xml:space="preserve">
+    <value>The hero xp rate has been changed!</value>
+  </data>
+  <data name="HERO_LEVELUP" xml:space="preserve">
+    <value>You hero level has been increased!</value>
+  </data>
+  <data name="HERO_XPRATE_NOW" xml:space="preserve">
+    <value>Hero rate </value>
+  </data>
+  <data name="NO_FAMILY_RIGHT" xml:space="preserve">
+    <value>You don't have family rights.</value>
+  </data>
+  <data name="NO_FAMILY_WAREHOUSE" xml:space="preserve">
+    <value>No family warehouse found.</value>
+  </data>
+  <data name="YOU_GET_PET" xml:space="preserve">
+    <value>You get a pet.</value>
   </data>
 </root>

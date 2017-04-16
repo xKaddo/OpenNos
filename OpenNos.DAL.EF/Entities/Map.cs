@@ -12,12 +12,12 @@
  * GNU General Public License for more details.
  */
 
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace OpenNos.DAL.EF
 {
-    using System.Collections.Generic;
-    using System.ComponentModel.DataAnnotations;
-    using System.ComponentModel.DataAnnotations.Schema;
-
     public class Map
     {
         #region Instantiation
@@ -29,6 +29,7 @@ namespace OpenNos.DAL.EF
             MapNpc = new HashSet<MapNpc>();
             Portal = new HashSet<Portal>();
             Portal1 = new HashSet<Portal>();
+            ScriptedInstance = new HashSet<ScriptedInstance>();
             Teleporter = new HashSet<Teleporter>();
             MapTypeMap = new HashSet<MapTypeMap>();
             Respawn = new HashSet<Respawn>();
@@ -64,6 +65,8 @@ namespace OpenNos.DAL.EF
         public virtual ICollection<Respawn> Respawn { get; set; }
 
         public virtual ICollection<RespawnMapType> RespawnMapType { get; set; }
+
+        public virtual ICollection<ScriptedInstance> ScriptedInstance { get; set; }
 
         public bool ShopAllowed { get; set; }
 

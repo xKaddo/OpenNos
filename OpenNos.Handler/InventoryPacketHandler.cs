@@ -13,8 +13,11 @@
  */
 
 using OpenNos.Core;
+using OpenNos.Core.Handling;
 using OpenNos.Domain;
 using OpenNos.GameObject;
+using OpenNos.GameObject.Helpers;
+using OpenNos.GameObject.Packets.ClientPackets;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -25,264 +28,174 @@ namespace OpenNos.Handler
 {
     public class InventoryPacketHandler : IPacketHandler
     {
-        #region Members
-
-        private readonly ClientSession _session;
-
-        #endregion
-
         #region Instantiation
 
         public InventoryPacketHandler(ClientSession session)
         {
-            _session = session;
+            Session = session;
         }
 
         #endregion
 
         #region Properties
 
-        public ClientSession Session
-        {
-            get
-            {
-                return _session;
-            }
-        }
+        private ClientSession Session { get; }
 
         #endregion
 
         #region Methods
 
-        [Packet("#req_exc")]
-        public void AcceptExchange(string packet)
+        /// <summary>
+        /// b_i packet
+        /// </summary>
+        /// <param name="bIPacket"></param>
+        public void AskToDelete(BIPacket bIPacket)
         {
-            Logger.Debug(packet, Session.SessionId);
-            string[] packetsplit = packet.Split(' ', '^');
-            byte mode;
-            long characterId;
-            if (byte.TryParse(packetsplit[2], out mode) && long.TryParse(packetsplit[3], out characterId))
+            Logger.Debug(Session.Character.GenerateIdentity(), bIPacket.ToString());
+            switch (bIPacket.Option)
             {
-                if (Session.Character.MapId != ServerManager.Instance.GetProperty<short>(characterId, nameof(Character.MapId)))
-                {
-                    ServerManager.Instance.SetProperty(characterId, nameof(Character.ExchangeInfo), null);
-                    Session.Character.ExchangeInfo = null;
-                }
-                else
-                {
-                    switch (mode)
+                case null:
+                    Session.SendPacket(UserInterfaceHelper.Instance.GenerateDialog($"#b_i^{(byte)bIPacket.InventoryType}^{bIPacket.Slot}^1 #b_i^0^0^5 {Language.Instance.GetMessageFromKey("ASK_TO_DELETE")}"));
+                    break;
+
+                case 1:
+                    Session.SendPacket(UserInterfaceHelper.Instance.GenerateDialog($"#b_i^{(byte)bIPacket.InventoryType}^{bIPacket.Slot}^2 #b_i^{(byte)bIPacket.InventoryType}^{bIPacket.Slot}^5 {Language.Instance.GetMessageFromKey("SURE_TO_DELETE")}"));
+                    break;
+
+                case 2:
+                    if (Session.Character.InExchangeOrTrade || bIPacket.InventoryType == InventoryType.Bazaar)
                     {
-                        case 2:
-                            bool otherInExchangeOrTrade = ServerManager.Instance.GetProperty<bool>(characterId, nameof(Character.InExchangeOrTrade));
-                            if (!Session.Character.InExchangeOrTrade || !otherInExchangeOrTrade)
+                        return;
+                    }
+                    Session.Character.DeleteItem(bIPacket.InventoryType, bIPacket.Slot);
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// deposit packet
+        /// </summary>
+        /// <param name="depositPacket"></param>
+        public void Deposit(DepositPacket depositPacket)
+        {
+            ItemInstance item = Session.Character.Inventory.LoadBySlotAndType(depositPacket.Slot, depositPacket.Inventory);
+            ItemInstance itemdest = Session.Character.Inventory.LoadBySlotAndType(depositPacket.NewSlot, depositPacket.PartnerBackpack ? InventoryType.PetWarehouse : InventoryType.Warehouse);
+
+            // check if the destination slot is out of range
+            if (depositPacket.NewSlot >= (depositPacket.PartnerBackpack ? (Session.Character.StaticBonusList.Any(s => s.StaticBonusType == StaticBonusType.PetBackPack) ? 50 : 0) : Session.Character.WareHouseSize))
+            {
+                return;
+            }
+
+            // check if the character is allowed to move the item
+            if (Session.Character.InExchangeOrTrade)
+            {
+                return;
+            }
+
+            // actually move the item from source to destination
+            Session.Character.Inventory.DepositItem(depositPacket.Inventory, depositPacket.Slot, depositPacket.Amount, depositPacket.NewSlot, ref item, ref itemdest, depositPacket.PartnerBackpack);
+        }
+
+        /// <summary>
+        /// eqinfo packet
+        /// </summary>
+        /// <param name="equipmentInfoPacket"></param>
+        public void EquipmentInfo(EquipmentInfoPacket equipmentInfoPacket)
+        {
+            Logger.Debug(Session.Character.GenerateIdentity(), equipmentInfoPacket.ToString());
+            bool isNPCShopItem = false;
+            WearableInstance inventory = null;
+            switch (equipmentInfoPacket.Type)
+            {
+                case 0:
+                    inventory = Session.Character.Inventory.LoadBySlotAndType<WearableInstance>(equipmentInfoPacket.Slot, InventoryType.Wear) ??
+                                Session.Character.Inventory.LoadBySlotAndType<SpecialistInstance>(equipmentInfoPacket.Slot, InventoryType.Wear);
+                    break;
+
+                case 1:
+                    inventory = Session.Character.Inventory.LoadBySlotAndType<WearableInstance>(equipmentInfoPacket.Slot, InventoryType.Equipment) ??
+                                Session.Character.Inventory.LoadBySlotAndType<SpecialistInstance>(equipmentInfoPacket.Slot, InventoryType.Equipment) ??
+                                Session.Character.Inventory.LoadBySlotAndType<BoxInstance>(equipmentInfoPacket.Slot, InventoryType.Equipment);
+                    break;
+
+                case 2:
+                    isNPCShopItem = true;
+                    if (ServerManager.Instance.GetItem(equipmentInfoPacket.Slot) != null)
+                    {
+                        inventory = new WearableInstance(equipmentInfoPacket.Slot, 1);
+                        break;
+                    }
+                    return;
+
+                case 5:
+                    if (Session.Character.ExchangeInfo != null)
+                    {
+                        ExchangeInfo exch = ServerManager.Instance.GetProperty<ExchangeInfo>(Session.Character.ExchangeInfo.TargetCharacterId, nameof(Character.ExchangeInfo));
+                        if (exch?.ExchangeList?.ElementAtOrDefault(equipmentInfoPacket.Slot) != null)
+                        {
+                            Guid id = exch.ExchangeList.ElementAt(equipmentInfoPacket.Slot).Id;
+                            Inventory inv = ServerManager.Instance.GetProperty<Inventory>(Session.Character.ExchangeInfo.TargetCharacterId, nameof(Character.Inventory));
+                            inventory = inv.LoadByItemInstance<WearableInstance>(id) ??
+                                        inv.LoadByItemInstance<SpecialistInstance>(id) ??
+                                        inv.LoadByItemInstance<BoxInstance>(id);
+                        }
+                    }
+                    break;
+
+                case 6:
+                    if (equipmentInfoPacket.ShopOwnerId != null)
+                    {
+                        KeyValuePair<long, MapShop> shop = Session.CurrentMapInstance.UserShops.FirstOrDefault(mapshop => mapshop.Value.OwnerId.Equals(equipmentInfoPacket.ShopOwnerId));
+                        PersonalShopItem item = shop.Value?.Items.FirstOrDefault(i => i.ShopSlot.Equals(equipmentInfoPacket.Slot));
+                        if (item != null)
+                        {
+                            if (item.ItemInstance.GetType() == typeof(BoxInstance))
                             {
-                                if (characterId == Session.Character.CharacterId || Session.Character.Speed == 0)
-                                {
-                                    return;
-                                }
-                                Session.SendPacket($"exc_list 1 {characterId} -1");
-                                ExchangeInfo exc = new ExchangeInfo
-                                {
-                                    TargetCharacterId = characterId,
-                                    Confirm = false
-                                };
-                                Session.Character.ExchangeInfo = exc;
-                                ServerManager.Instance.SetProperty(characterId, nameof(Character.ExchangeInfo), new ExchangeInfo { TargetCharacterId = Session.Character.CharacterId, Confirm = false });
-                                Session.CurrentMap?.Broadcast(Session, $"exc_list 1 {Session.Character.CharacterId} -1", ReceiverType.OnlySomeone, string.Empty, characterId);
+                                inventory = (BoxInstance)item.ItemInstance;
                             }
                             else
                             {
-                                Session.CurrentMap?.Broadcast(Session, Session.Character.GenerateModal(Language.Instance.GetMessageFromKey("ALREADY_EXCHANGE"), 0), ReceiverType.OnlySomeone, string.Empty, characterId);
-                            }
-                            break;
-
-                        case 5:
-                            ServerManager.Instance.GetProperty<string>(characterId, nameof(Character.Name));
-                            ServerManager.Instance.SetProperty(characterId, nameof(Character.ExchangeInfo), null);
-                            Session.Character.ExchangeInfo = null;
-                            Session.SendPacket(Session.Character.GenerateSay(Language.Instance.GetMessageFromKey("YOU_REFUSED"), 10));
-                            Session.CurrentMap?.Broadcast(Session, Session.Character.GenerateSay(string.Format(Language.Instance.GetMessageFromKey("EXCHANGE_REFUSED"), Session.Character.Name), 10), ReceiverType.OnlySomeone, string.Empty, characterId);
-                            break;
-                    }
-                }
-            }
-        }
-
-        [Packet("#b_i")]
-        public void AnswerToDelete(string packet)
-        {
-            Logger.Debug(packet, Session.SessionId);
-            string[] packetsplit = packet.Split(' ', '^');
-            byte type;
-            short slot;
-            if (byte.TryParse(packetsplit[2], out type) && short.TryParse(packetsplit[3], out slot))
-            {
-                if (Convert.ToInt32(packetsplit[4]) == 1)
-                {
-                    Session.SendPacket(Session.Character.GenerateDialog($"#b_i^{type}^{slot}^2 #b_i^{type}^{slot}^5 {Language.Instance.GetMessageFromKey("SURE_TO_DELETE")}"));
-                }
-                else if (Convert.ToInt32(packetsplit[4]) == 2)
-                {
-                    if (Session.Character.InExchangeOrTrade)
-                    {
-                        return;
-                    }
-                    Session.Character.DeleteItem((InventoryType)type, slot);
-                }
-            }
-        }
-
-        [Packet("b_i")]
-        public void AskToDelete(string packet)
-        {
-            Logger.Debug(packet, Session.SessionId);
-            string[] packetsplit = packet.Split(' ');
-            byte type;
-            short slot;
-            if (byte.TryParse(packetsplit[2], out type) && short.TryParse(packetsplit[3], out slot))
-            {
-                Session.SendPacket(Session.Character.GenerateDialog($"#b_i^{type}^{slot}^1 #b_i^0^0^5 {Language.Instance.GetMessageFromKey("ASK_TO_DELETE")}"));
-            }
-        }
-
-        [Packet("s_carrier")]
-        public void SpecialistHolder(string packet)
-        {
-            // left as a placeholder
-            Logger.Debug(packet, Session.SessionId);
-            string[] packetsplit = packet.Split(' ');
-            short slot;
-            short holderSlot;
-            if (short.TryParse(packetsplit[2], out slot) && short.TryParse(packetsplit[3], out holderSlot))
-            {
-                SpecialistInstance specialist = Session.Character.Inventory.LoadBySlotAndType<SpecialistInstance>(slot, InventoryType.Equipment);
-                BoxInstance holder = Session.Character.Inventory.LoadBySlotAndType<BoxInstance>(holderSlot, InventoryType.Equipment);
-                if (specialist != null && holder != null)
-                {
-                    holder.HoldingVNum = specialist.ItemVNum;
-                    holder.SlDamage = specialist.SlDamage;
-                    holder.SlDefence = specialist.SlDefence;
-                    holder.SlElement = specialist.SlElement;
-                    holder.SlHP = specialist.SlHP;
-                    holder.SpDamage = specialist.SpDamage;
-                    holder.SpDark = specialist.SpDark;
-                    holder.SpDefence = specialist.SpDefence;
-                    holder.SpElement = specialist.SpElement;
-                    holder.SpFire = specialist.SpFire;
-                    holder.SpHP = specialist.SpHP;
-                    holder.SpLevel = specialist.SpLevel;
-                    holder.SpLight = specialist.SpLight;
-                    holder.SpStoneUpgrade = specialist.SpStoneUpgrade;
-                    holder.SpWater = specialist.SpWater;
-                    holder.Upgrade = specialist.Upgrade;
-                    holder.XP = specialist.XP;
-                    Session.SendPacket("shop_end 2");
-                    Session.Character.Inventory.RemoveItemAmountFromInventory(1, specialist.Id);
-                }
-            }
-        }
-
-        [Packet("eqinfo")]
-        public void EquipmentInfo(string packet)
-        {
-            Logger.Debug(packet, Session.SessionId);
-            string[] packetsplit = packet.Split(' ');
-            short slot;
-            byte type;
-            if (packetsplit.Length > 3 && byte.TryParse(packetsplit[2], out type) && short.TryParse(packetsplit[3], out slot))
-            {
-                bool isNPCShopItem = false;
-                WearableInstance inventory = null;
-                switch (type)
-                {
-                    case 0:
-                        inventory = Session.Character.Inventory.LoadBySlotAndType<WearableInstance>(slot, InventoryType.Wear) ??
-                                    Session.Character.Inventory.LoadBySlotAndType<SpecialistInstance>(slot, InventoryType.Wear);
-                        break;
-
-                    case 1:
-                        inventory = Session.Character.Inventory.LoadBySlotAndType<WearableInstance>(slot, InventoryType.Equipment) ??
-                                    Session.Character.Inventory.LoadBySlotAndType<SpecialistInstance>(slot, InventoryType.Equipment) ?? 
-                                    Session.Character.Inventory.LoadBySlotAndType<BoxInstance>(slot, InventoryType.Equipment);
-                        break;
-
-                    case 2:
-                        isNPCShopItem = true;
-                        if (ServerManager.GetItem(slot) != null)
-                        {
-                            inventory = new WearableInstance(slot, 1);
-                            break;
-                        }
-                        return;
-
-                    case 5:
-                        if (Session.Character.ExchangeInfo != null)
-                        {
-                            if (short.TryParse(packetsplit[3], out slot))
-                            {
-                                ExchangeInfo exch = ServerManager.Instance.GetProperty<ExchangeInfo>(Session.Character.ExchangeInfo.TargetCharacterId, nameof(Character.ExchangeInfo));
-                                if (exch?.ExchangeList?.ElementAtOrDefault(slot) != null)
+                                try
                                 {
-                                    Guid id = exch.ExchangeList.ElementAt(slot).Id;
-                                    Inventory inv = ServerManager.Instance.GetProperty<Inventory>(Session.Character.ExchangeInfo.TargetCharacterId, nameof(Character.Inventory));
-                                    inventory = inv.LoadByItemInstance<WearableInstance>(id) ??
-                                                inv.LoadByItemInstance<SpecialistInstance>(id) ??
-                                                inv.LoadByItemInstance<BoxInstance>(id);
+                                    inventory = (WearableInstance)item.ItemInstance;
+                                }
+                                catch
+                                {
+                                    return;
                                 }
                             }
                         }
-                        break;
-
-                    case 6:
-                        long shopOwnerId;
-                        if(long.TryParse(packetsplit[5], out shopOwnerId))
-                        {
-                            KeyValuePair<long, MapShop> shop = Session.CurrentMap.UserShops.FirstOrDefault(mapshop => mapshop.Value.OwnerId.Equals(shopOwnerId));
-                            PersonalShopItem item = shop.Value?.Items.FirstOrDefault(i => i.ShopSlot.Equals(slot));
-                            if (item != null)
-                            {
-                                if (item.ItemInstance.GetType() == typeof(BoxInstance))
-                                {
-                                    inventory = (BoxInstance) item.ItemInstance;
-                                }
-                                else
-                                {
-                                    inventory = (WearableInstance) item.ItemInstance;
-                                }
-                            }
-                        }
-                        break;
-
-                    case 7:
-                        inventory = Session.Character.Inventory.LoadBySlotAndType<SpecialistInstance>(slot, InventoryType.Specialist); // Partner inv
-                        break;
-
-                    case 10:
-                        inventory = Session.Character.Inventory.LoadBySlotAndType<SpecialistInstance>(slot, InventoryType.Specialist);
-                        break;
-
-                    case 11:
-                        inventory = Session.Character.Inventory.LoadBySlotAndType<WearableInstance>(slot, InventoryType.Costume);
-                        break;
-                }
-                if (inventory?.Item != null)
-                {
-                    if (inventory.IsEmpty || isNPCShopItem)
-                    {
-                        Session.SendPacket(Session.Character.GenerateEInfo(inventory));
-                        return;
                     }
-                    Session.SendPacket(inventory.Item.EquipmentSlot != EquipmentType.Sp ?
-                        Session.Character.GenerateEInfo(inventory) : inventory.Item.SpType == 0 && inventory.Item.ItemSubType == 4 ?
-                        Session.Character.GeneratePslInfo(inventory as SpecialistInstance, 0) : Session.Character.GenerateSlInfo(inventory as SpecialistInstance, 0));
+                    break;
+
+                case 7:
+                    inventory = Session.Character.Inventory.LoadBySlotAndType<SpecialistInstance>(equipmentInfoPacket.Slot, InventoryType.Specialist);
+                    break;
+
+                case 10:
+                    inventory = Session.Character.Inventory.LoadBySlotAndType<SpecialistInstance>(equipmentInfoPacket.Slot, InventoryType.Specialist);
+                    break;
+
+                case 11:
+                    inventory = Session.Character.Inventory.LoadBySlotAndType<WearableInstance>(equipmentInfoPacket.Slot, InventoryType.Costume);
+                    break;
+            }
+            if (inventory?.Item != null)
+            {
+                if (inventory.IsEmpty || isNPCShopItem)
+                {
+                    Session.SendPacket(inventory.GenerateEInfo());
+                    return;
                 }
+                Session.SendPacket(inventory.Item.EquipmentSlot != EquipmentType.Sp ? inventory.GenerateEInfo() : inventory.Item.SpType == 0 && inventory.Item.ItemSubType == 4 ? (inventory as SpecialistInstance)?.GeneratePslInfo() : (inventory as SpecialistInstance)?.GenerateSlInfo());
             }
         }
 
         [Packet("exc_list")]
         public void ExchangeList(string packet)
         {
-            Logger.Debug(packet, Session.SessionId);
+            Logger.Debug(Session.Character.GenerateIdentity(), packet);
             string[] packetsplit = packet.Split(' ');
             long gold;
             long.TryParse(packetsplit[2], out gold);
@@ -296,18 +209,27 @@ namespace OpenNos.Handler
             }
 
             ClientSession targetSession = ServerManager.Instance.GetSessionByCharacterId(Session.Character.ExchangeInfo.TargetCharacterId);
-            if (Session.Character.HasShopOpened || (targetSession != null && targetSession.Character.HasShopOpened))
+            if (Session.Character.HasShopOpened || targetSession != null && targetSession.Character.HasShopOpened)
             {
                 CloseExchange(Session, targetSession);
                 return;
             }
 
-            for (int j = 6, i = 0; j <= packetsplit.Length; j += 3, i++)
+            for (int j = 6, i = 0; j <= packetsplit.Length && i < 10; j += 3, i++)
             {
                 byte.TryParse(packetsplit[j - 3], out type[i]);
                 short.TryParse(packetsplit[j - 2], out slot[i]);
                 byte.TryParse(packetsplit[j - 1], out qty[i]);
+                if ((InventoryType)type[i] == InventoryType.Bazaar)
+                {
+                    CloseExchange(Session, targetSession);
+                    return;
+                }
                 ItemInstance item = Session.Character.Inventory.LoadBySlotAndType(slot[i], (InventoryType)type[i]);
+                if (item == null)
+                {
+                    return;
+                }
                 if (qty[i] <= 0 || item.Amount < qty[i])
                 {
                     return;
@@ -329,7 +251,7 @@ namespace OpenNos.Handler
                 else if (it.IsBound)
                 {
                     Session.SendPacket("exc_close 0");
-                    Session.CurrentMap?.Broadcast(Session, "exc_close 0", ReceiverType.OnlySomeone, string.Empty, Session.Character.ExchangeInfo.TargetCharacterId);
+                    Session.CurrentMapInstance?.Broadcast(Session, "exc_close 0", ReceiverType.OnlySomeone, string.Empty, Session.Character.ExchangeInfo.TargetCharacterId);
 
                     ServerManager.Instance.SetProperty(Session.Character.ExchangeInfo.TargetCharacterId, nameof(Character.ExchangeInfo), null);
                     Session.Character.ExchangeInfo = null;
@@ -337,29 +259,42 @@ namespace OpenNos.Handler
                 }
             }
             Session.Character.ExchangeInfo.Gold = gold;
-            Session.CurrentMap?.Broadcast(Session, $"exc_list 1 {Session.Character.CharacterId} {gold} {packetList}", ReceiverType.OnlySomeone, string.Empty, Session.Character.ExchangeInfo.TargetCharacterId);
+            Session.CurrentMapInstance?.Broadcast(Session, $"exc_list 1 {Session.Character.CharacterId} {gold} {packetList}", ReceiverType.OnlySomeone, string.Empty, Session.Character.ExchangeInfo.TargetCharacterId);
             Session.Character.ExchangeInfo.Validate = true;
         }
 
-        [Packet("req_exc")]
-        public void ExchangeRequest(string deserializedPacket)
+        /// <summary>
+        /// req_exc packet
+        /// </summary>
+        /// <param name="exchangeRequestPacket"></param>
+        public void ExchangeRequest(ExchangeRequestPacket exchangeRequestPacket)
         {
-            Logger.Debug(deserializedPacket, Session.SessionId);
-            ExchangeRequestPacket packet = PacketFactory.Deserialize<ExchangeRequestPacket>(deserializedPacket, true);
-            if (packet != null)
+            Logger.Debug(Session.Character.GenerateIdentity(), exchangeRequestPacket.ToString());
+            if (exchangeRequestPacket.CharacterId != 0 && Session.Character.MapInstanceId != ServerManager.Instance.GetProperty<Guid>(exchangeRequestPacket.CharacterId, nameof(Character.MapInstanceId)))
             {
-                switch (packet.RequestType)
+                ServerManager.Instance.SetProperty(exchangeRequestPacket.CharacterId, nameof(Character.ExchangeInfo), null);
+                Session.Character.ExchangeInfo = null;
+            }
+            else
+            {
+                switch (exchangeRequestPacket.RequestType)
                 {
                     case RequestExchangeType.Requested: // send the request trade
                         {
-                            if (!Session.HasCurrentMap)
+                            if (!Session.HasCurrentMapInstance)
                             {
                                 return;
                             }
-                            ClientSession targetSession = Session.CurrentMap.GetSessionByCharacterId(packet.CharacterId);
+                            ClientSession targetSession = Session.CurrentMapInstance.GetSessionByCharacterId(exchangeRequestPacket.CharacterId);
 
                             if (targetSession == null)
                             {
+                                return;
+                            }
+
+                            if (Session.Character.IsBlockedByCharacter(exchangeRequestPacket.CharacterId))
+                            {
+                                Session.SendPacket(UserInterfaceHelper.Instance.GenerateInfo(Language.Instance.GetMessageFromKey("BLACKLIST_BLOCKED")));
                                 return;
                             }
 
@@ -369,19 +304,19 @@ namespace OpenNos.Handler
                             }
                             if (targetSession.Character.LastSkillUse.AddSeconds(20) > DateTime.Now || targetSession.Character.LastDefence.AddSeconds(20) > DateTime.Now)
                             {
-                                Session.SendPacket(Session.Character.GenerateInfo(string.Format(Language.Instance.GetMessageFromKey("PLAYER_IN_BATTLE"), targetSession.Character.Name)));
+                                Session.SendPacket(UserInterfaceHelper.Instance.GenerateInfo(string.Format(Language.Instance.GetMessageFromKey("PLAYER_IN_BATTLE"), targetSession.Character.Name)));
                                 return;
                             }
 
                             if (Session.Character.LastSkillUse.AddSeconds(20) > DateTime.Now || Session.Character.LastDefence.AddSeconds(20) > DateTime.Now)
                             {
-                                Session.SendPacket(Session.Character.GenerateInfo(Language.Instance.GetMessageFromKey("IN_BATTLE")));
+                                Session.SendPacket(UserInterfaceHelper.Instance.GenerateInfo(Language.Instance.GetMessageFromKey("IN_BATTLE")));
                                 return;
                             }
 
                             if (Session.Character.HasShopOpened || targetSession.Character.HasShopOpened)
                             {
-                                Session.SendPacket(Session.Character.GenerateMsg(Language.Instance.GetMessageFromKey("HAS_SHOP_OPENED"), 10));
+                                Session.SendPacket(UserInterfaceHelper.Instance.GenerateMsg(Language.Instance.GetMessageFromKey("HAS_SHOP_OPENED"), 10));
                                 return;
                             }
 
@@ -393,26 +328,27 @@ namespace OpenNos.Handler
                             {
                                 if (Session.Character.InExchangeOrTrade || targetSession.Character.InExchangeOrTrade)
                                 {
-                                    Session.SendPacket(Session.Character.GenerateModal(Language.Instance.GetMessageFromKey("ALREADY_EXCHANGE"), 0));
+                                    Session.SendPacket(UserInterfaceHelper.Instance.GenerateModal(Language.Instance.GetMessageFromKey("ALREADY_EXCHANGE"), 0));
                                 }
                                 else
                                 {
-                                    Session.SendPacket(Session.Character.GenerateModal(string.Format(Language.Instance.GetMessageFromKey("YOU_ASK_FOR_EXCHANGE"), targetSession.Character.Name), 0));
-                                    targetSession.SendPacket(Session.Character.GenerateDialog($"#req_exc^2^{Session.Character.CharacterId} #req_exc^5^{Session.Character.CharacterId} {string.Format(Language.Instance.GetMessageFromKey("INCOMING_EXCHANGE"), Session.Character.Name)}"));
+                                    Session.SendPacket(UserInterfaceHelper.Instance.GenerateModal(string.Format(Language.Instance.GetMessageFromKey("YOU_ASK_FOR_EXCHANGE"), targetSession.Character.Name), 0));
+                                    Session.Character.TradeRequests.Add(targetSession.Character.CharacterId);
+                                    targetSession.SendPacket(UserInterfaceHelper.Instance.GenerateDialog($"#req_exc^2^{Session.Character.CharacterId} #req_exc^5^{Session.Character.CharacterId} {string.Format(Language.Instance.GetMessageFromKey("INCOMING_EXCHANGE"), Session.Character.Name)}"));
                                 }
                             }
                             break;
                         }
                     case RequestExchangeType.Confirmed: // click Trade button in exchange window
                         {
-                            if (Session.HasCurrentMap && Session.HasSelectedCharacter
+                            if (Session.HasCurrentMapInstance && Session.HasSelectedCharacter
                                 && Session.Character.ExchangeInfo != null && Session.Character.ExchangeInfo.TargetCharacterId != Session.Character.CharacterId)
                             {
-                                if (!Session.HasCurrentMap)
+                                if (!Session.HasCurrentMapInstance)
                                 {
                                     return;
                                 }
-                                ClientSession targetSession = Session.CurrentMap.GetSessionByCharacterId(Session.Character.ExchangeInfo.TargetCharacterId);
+                                ClientSession targetSession = Session.CurrentMapInstance.GetSessionByCharacterId(Session.Character.ExchangeInfo.TargetCharacterId);
 
                                 if (targetSession == null)
                                 {
@@ -433,8 +369,13 @@ namespace OpenNos.Handler
                                         Inventory inventory = targetSession.Character.Inventory;
 
                                         long gold = targetSession.Character.Gold;
-                                        int backpack = targetSession.Character.Backpack;
+                                        int backpack = targetSession.Character.HaveBackpack() ? 1 : 0;
+                                        long maxGold = ServerManager.Instance.MaxGold;
 
+                                        if (targetExchange == null)
+                                        {
+                                            return;
+                                        }
                                         if (Session.Character.ExchangeInfo.Validate && targetExchange.Validate)
                                         {
                                             Session.Character.ExchangeInfo.Confirm = true;
@@ -445,15 +386,15 @@ namespace OpenNos.Handler
 
                                                 bool @continue = true;
                                                 bool goldmax = false;
-                                                if (!Session.Character.Inventory.GetFreeSlotAmount(targetExchange.ExchangeList, Session.Character.Backpack))
+                                                if (!Session.Character.Inventory.EnoughPlace(targetExchange.ExchangeList, Session.Character.HaveBackpack() ? 1 : 0))
                                                 {
                                                     @continue = false;
                                                 }
-                                                if (!inventory.GetFreeSlotAmount(Session.Character.ExchangeInfo.ExchangeList, backpack))
+                                                if (!inventory.EnoughPlace(Session.Character.ExchangeInfo.ExchangeList, backpack))
                                                 {
                                                     @continue = false;
                                                 }
-                                                if (Session.Character.ExchangeInfo.Gold + gold > 1000000000)
+                                                if (Session.Character.ExchangeInfo.Gold + gold > maxGold)
                                                 {
                                                     goldmax = true;
                                                 }
@@ -461,14 +402,14 @@ namespace OpenNos.Handler
                                                 {
                                                     return;
                                                 }
-                                                if (targetExchange.Gold + Session.Character.Gold > 1000000000)
+                                                if (targetExchange.Gold + Session.Character.Gold > maxGold)
                                                 {
                                                     goldmax = true;
                                                 }
                                                 if (!@continue || goldmax)
                                                 {
-                                                    string message = !@continue ? Session.Character.GenerateMsg(Language.Instance.GetMessageFromKey("NOT_ENOUGH_PLACE"), 0)
-                                                        : Session.Character.GenerateMsg(Language.Instance.GetMessageFromKey("MAX_GOLD"), 0);
+                                                    string message = !@continue ? UserInterfaceHelper.Instance.GenerateMsg(Language.Instance.GetMessageFromKey("NOT_ENOUGH_PLACE"), 0)
+                                                        : UserInterfaceHelper.Instance.GenerateMsg(Language.Instance.GetMessageFromKey("MAX_GOLD"), 0);
                                                     Session.SendPacket(message);
                                                     targetSession.SendPacket(message);
                                                     CloseExchange(Session, targetSession);
@@ -477,7 +418,7 @@ namespace OpenNos.Handler
                                                 {
                                                     if (Session.Character.ExchangeInfo.ExchangeList.Any(ei => !(ei.Item.IsTradable || ei.IsBound)))
                                                     {
-                                                        Session.SendPacket(Session.Character.GenerateMsg(Language.Instance.GetMessageFromKey("ITEM_NOT_TRADABLE"), 0));
+                                                        Session.SendPacket(UserInterfaceHelper.Instance.GenerateMsg(Language.Instance.GetMessageFromKey("ITEM_NOT_TRADABLE"), 0));
                                                         CloseExchange(Session, targetSession);
                                                     }
                                                     else // all items can be traded
@@ -496,7 +437,7 @@ namespace OpenNos.Handler
                                             }
                                             else
                                             {
-                                                Session.SendPacket(Session.Character.GenerateInfo(string.Format(Language.Instance.GetMessageFromKey("IN_WAITING_FOR"), targetSession.Character.Name)));
+                                                Session.SendPacket(UserInterfaceHelper.Instance.GenerateInfo(string.Format(Language.Instance.GetMessageFromKey("IN_WAITING_FOR"), targetSession.Character.Name)));
                                             }
                                         }
                                     }
@@ -507,133 +448,203 @@ namespace OpenNos.Handler
                         }
                     case RequestExchangeType.Cancelled: // cancel trade thru exchange window
                         {
-                            if (Session.HasCurrentMap && Session.Character.ExchangeInfo != null)
+                            if (Session.HasCurrentMapInstance && Session.Character.ExchangeInfo != null)
                             {
-                                ClientSession targetSession = Session.CurrentMap.GetSessionByCharacterId(Session.Character.ExchangeInfo.TargetCharacterId);
+                                ClientSession targetSession = Session.CurrentMapInstance.GetSessionByCharacterId(Session.Character.ExchangeInfo.TargetCharacterId);
                                 CloseExchange(Session, targetSession);
                             }
                             break;
                         }
+
+                    case RequestExchangeType.List:
+                        bool otherInExchangeOrTrade = ServerManager.Instance.GetProperty<bool>(exchangeRequestPacket.CharacterId, nameof(Character.InExchangeOrTrade));
+                        if (!Session.Character.InExchangeOrTrade || !otherInExchangeOrTrade)
+                        {
+                            ClientSession otherSession = ServerManager.Instance.GetSessionByCharacterId(exchangeRequestPacket.CharacterId);
+                            if (exchangeRequestPacket.CharacterId == Session.Character.CharacterId || Session.Character.Speed == 0 || otherSession == null || otherSession.Character.TradeRequests.All(s => s != Session.Character.CharacterId))
+                            {
+                                return;
+                            }
+                            Session.SendPacket($"exc_list 1 {exchangeRequestPacket.CharacterId} -1");
+                            ExchangeInfo exc = new ExchangeInfo
+                            {
+                                TargetCharacterId = exchangeRequestPacket.CharacterId,
+                                Confirm = false
+                            };
+                            Session.Character.ExchangeInfo = exc;
+                            ServerManager.Instance.SetProperty(exchangeRequestPacket.CharacterId, nameof(Character.ExchangeInfo), new ExchangeInfo { TargetCharacterId = Session.Character.CharacterId, Confirm = false });
+                            Session.CurrentMapInstance?.Broadcast(Session, $"exc_list 1 {Session.Character.CharacterId} -1", ReceiverType.OnlySomeone, string.Empty, exchangeRequestPacket.CharacterId);
+                        }
+                        else
+                        {
+                            Session.CurrentMapInstance?.Broadcast(Session, UserInterfaceHelper.Instance.GenerateModal(Language.Instance.GetMessageFromKey("ALREADY_EXCHANGE"), 0), ReceiverType.OnlySomeone, string.Empty, exchangeRequestPacket.CharacterId);
+                        }
+                        break;
+
+                    case RequestExchangeType.Declined:
+                        ServerManager.Instance.GetProperty<string>(exchangeRequestPacket.CharacterId, nameof(Character.Name));
+                        ServerManager.Instance.SetProperty(exchangeRequestPacket.CharacterId, nameof(Character.ExchangeInfo), null);
+                        Session.Character.ExchangeInfo = null;
+                        Session.SendPacket(Session.Character.GenerateSay(Language.Instance.GetMessageFromKey("YOU_REFUSED"), 10));
+                        Session.CurrentMapInstance?.Broadcast(Session, Session.Character.GenerateSay(string.Format(Language.Instance.GetMessageFromKey("EXCHANGE_REFUSED"), Session.Character.Name), 10), ReceiverType.OnlySomeone, string.Empty, exchangeRequestPacket.CharacterId);
+                        break;
+
                     default:
-                        Logger.Log.Warn($"Exchange-Request-Type not implemented. RequestType: {packet.RequestType})");
+                        Logger.Log.Warn($"Exchange-Request-Type not implemented. RequestType: {exchangeRequestPacket.RequestType})");
                         break;
                 }
             }
         }
 
         /// <summary>
-        /// get
+        /// get packet
         /// </summary>
-        /// <param name="packet"></param>
-        public void GetItem(GetPacket packet)
+        /// <param name="getPacket"></param>
+        public void GetItem(GetPacket getPacket)
         {
-            Logger.Debug(packet.ToString(), Session.SessionId);
-
-            if (!Session.HasCurrentMap || !Session.CurrentMap.DroppedList.ContainsKey(packet.TransportId))
+            Logger.Debug(Session.Character.GenerateIdentity(), getPacket.ToString());
+            if (Session.Character.LastSkillUse.AddSeconds(1) > DateTime.Now || Session.Character.IsVehicled || !Session.HasCurrentMapInstance)
             {
                 return;
             }
 
-            MapItem mapItem = Session.CurrentMap.DroppedList[packet.TransportId];
-            if (Session.Character.LastSkillUse.AddSeconds(1) > DateTime.Now || Session.Character.IsVehicled)
+            if (getPacket.TransportId < 100000)
             {
-                return;
-            }
-            if (mapItem != null)
-            {
-                if (Session.Character.IsInRange(mapItem.PositionX, mapItem.PositionY, 3) && Session.HasCurrentMap)
+                MapButton button = Session.CurrentMapInstance.Buttons.FirstOrDefault(s => s.MapButtonId == getPacket.TransportId);
+                if (button != null)
                 {
-                    MonsterMapItem item = mapItem as MonsterMapItem;
-                    if (item != null)
+                    Session.SendPacket(UserInterfaceHelper.Instance.GenerateDelay(2000, 1, $"#git^{button.MapButtonId}"));
+                }
+            }
+            else
+            {
+                if (!Session.CurrentMapInstance.DroppedList.ContainsKey(getPacket.TransportId))
+                {
+                    return;
+                }
+
+                MapItem mapItem = Session.CurrentMapInstance.DroppedList[getPacket.TransportId];
+
+                if (mapItem != null)
+                {
+                    bool canpick = false;
+                    switch (getPacket.PickerType)
                     {
-                        MonsterMapItem monsterMapItem = item;
-                        if (monsterMapItem.Owner.HasValue)
-                        {
-                            Group group = ServerManager.Instance.Groups.FirstOrDefault(g => g.IsMemberOfGroup(monsterMapItem.Owner.Value) && g.IsMemberOfGroup(Session.Character.CharacterId));
-                            if (item.CreatedDate.AddSeconds(30) > DateTime.Now && !(monsterMapItem.Owner == Session.Character.CharacterId ||
-                                (group != null && group.SharingMode == (byte)GroupSharingType.Everyone)))
+                        case 1:
+                            canpick = Session.Character.IsInRange(mapItem.PositionX, mapItem.PositionY, 8);
+                            break;
+
+                        case 2:
+                            Mate mate = Session.Character.Mates.FirstOrDefault(s => s.MateTransportId == getPacket.PickerId && s.CanPickUp);
+                            if (mate != null)
                             {
-                                Session.SendPacket(Session.Character.GenerateSay(Language.Instance.GetMessageFromKey("NOT_YOUR_ITEM"), 10));
-                                return;
+                                canpick = mate.IsInRange(mapItem.PositionX, mapItem.PositionY, 8);
                             }
+                            break;
+                    }
+                    if (canpick && Session.HasCurrentMapInstance)
+                    {
+                        MonsterMapItem item = mapItem as MonsterMapItem;
+                        if (item != null)
+                        {
+                            MonsterMapItem monsterMapItem = item;
+                            if (Session.CurrentMapInstance.MapInstanceType != MapInstanceType.LodInstance && monsterMapItem.OwnerId.HasValue && monsterMapItem.OwnerId.Value != -1)
+                            {
+                                Group group = ServerManager.Instance.Groups.FirstOrDefault(g => g.IsMemberOfGroup(monsterMapItem.OwnerId.Value) && g.IsMemberOfGroup(Session.Character.CharacterId));
+                                if (item.CreatedDate.AddSeconds(30) > DateTime.Now && !(monsterMapItem.OwnerId == Session.Character.CharacterId || group != null && group.SharingMode == (byte)GroupSharingType.Everyone))
+                                {
+                                    Session.SendPacket(Session.Character.GenerateSay(Language.Instance.GetMessageFromKey("NOT_YOUR_ITEM"), 10));
+                                    return;
+                                }
+                            }
+
+                            // initialize and rarify
+                            item.Rarify(null);
                         }
 
-                        // initialize and rarify
-                        item.Rarify(null);
-                    }
-
-                    if (mapItem.ItemVNum != 1046)
-                    {
-                        ItemInstance mapItemInstance = mapItem.GetItemInstance();
-                        if (mapItemInstance.Item.ItemType == ItemType.Map)
+                        if (mapItem.ItemVNum != 1046)
                         {
-                            if (mapItemInstance.Item.Effect == 71)
+                            ItemInstance mapItemInstance = mapItem.GetItemInstance();
+                            if (mapItemInstance.Item.ItemType == ItemType.Map)
                             {
-                                Session.Character.SpPoint += mapItem.GetItemInstance().Item.EffectValue;
-                                if (Session.Character.SpPoint > 10000)
+                                if (mapItemInstance.Item.Effect == 71)
                                 {
-                                    Session.Character.SpPoint = 10000;
+                                    Session.Character.SpPoint += mapItem.GetItemInstance().Item.EffectValue;
+                                    if (Session.Character.SpPoint > 10000)
+                                    {
+                                        Session.Character.SpPoint = 10000;
+                                    }
+                                    Session.SendPacket(UserInterfaceHelper.Instance.GenerateMsg(string.Format(Language.Instance.GetMessageFromKey("SP_POINTSADDED"), mapItem.GetItemInstance().Item.EffectValue), 0));
+                                    Session.SendPacket(Session.Character.GenerateSpPoint());
                                 }
-                                Session.SendPacket(Session.Character.GenerateMsg(string.Format(Language.Instance.GetMessageFromKey("SP_POINTSADDED"), mapItem.GetItemInstance().Item.EffectValue), 0));
-                                Session.SendPacket(Session.Character.GenerateSpPoint());
+                                Session.CurrentMapInstance.DroppedList.Remove(getPacket.TransportId);
+                                Session.CurrentMapInstance?.Broadcast(Session.Character.GenerateGet(getPacket.TransportId));
                             }
-                            Session.CurrentMap.DroppedList.Remove(packet.TransportId);
-                            TransportFactory.Instance.RemoveTransportId(packet.TransportId);
-                            Session.CurrentMap?.Broadcast(Session.Character.GenerateGet(packet.TransportId));
+                            else
+                            {
+                                lock (Session.Character.Inventory)
+                                {
+                                    byte amount = mapItem.Amount;
+                                    List<ItemInstance> newInv = Session.Character.Inventory.AddToInventory(mapItemInstance);
+                                    if (newInv.Any(s => s != null))
+                                    {
+                                        Session.CurrentMapInstance.DroppedList.Remove(getPacket.TransportId);
+                                        Session.CurrentMapInstance?.Broadcast(Session.Character.GenerateGet(getPacket.TransportId));
+                                        if (getPacket.PickerType == 2)
+                                        {
+                                            Session.SendPacket(Session.Character.GenerateIcon(1, 1, newInv.First().ItemVNum));
+                                        }
+                                        Session.SendPacket(Session.Character.GenerateSay($"{Language.Instance.GetMessageFromKey("ITEM_ACQUIRED")}: {newInv.First().Item.Name} x {amount}", 12));
+                                        if (Session.CurrentMapInstance.MapInstanceType == MapInstanceType.LodInstance)
+                                        {
+                                            Session.CurrentMapInstance?.Broadcast(Session.Character.GenerateSay($"{string.Format(Language.Instance.GetMessageFromKey("ITEM_ACQUIRED_LOD"), Session.Character.Name)}: {newInv.First().Item.Name} x {mapItem.Amount}", 10));
+                                        }
+                                    }
+                                    else
+                                    {
+                                        Session.SendPacket(UserInterfaceHelper.Instance.GenerateMsg(Language.Instance.GetMessageFromKey("NOT_ENOUGH_PLACE"), 0));
+                                    }
+                                }
+                            }
                         }
                         else
                         {
-                            lock (Session.Character.Inventory)
+                            // handle gold drop
+                            long maxGold = ServerManager.Instance.MaxGold;
+                            MonsterMapItem droppedGold = mapItem as MonsterMapItem;
+                            if (droppedGold != null && Session.Character.Gold + droppedGold.GoldAmount <= maxGold)
                             {
-                                ItemInstance newInv = Session.Character.Inventory.AddToInventory(mapItemInstance);
-                                if (newInv != null)
+                                if (getPacket.PickerType == 2)
                                 {
-                                    Session.CurrentMap.DroppedList.Remove(packet.TransportId);
-                                    TransportFactory.Instance.RemoveTransportId(packet.TransportId);
-                                    Session.CurrentMap?.Broadcast(Session.Character.GenerateGet(packet.TransportId));
-                                    Session.SendPacket(Session.Character.GenerateInventoryAdd(newInv.ItemVNum, newInv.Amount, newInv.Type, newInv.Slot, newInv.Rare, newInv.Design, newInv.Upgrade, 0));
-                                    Session.SendPacket(Session.Character.GenerateSay($"{Language.Instance.GetMessageFromKey("ITEM_ACQUIRED")}: {newInv.Item.Name} x {mapItem.Amount}", 12));
+                                    Session.SendPacket(Session.Character.GenerateIcon(1, 1, 1046));
                                 }
-                                else
-                                {
-                                    Session.SendPacket(Session.Character.GenerateMsg(Language.Instance.GetMessageFromKey("NOT_ENOUGH_PLACE"), 0));
-                                }
+                                Session.Character.Gold += droppedGold.GoldAmount;
+                                Session.SendPacket(Session.Character.GenerateSay($"{Language.Instance.GetMessageFromKey("ITEM_ACQUIRED")}: {mapItem.GetItemInstance().Item.Name} x {droppedGold.GoldAmount}", 12));
                             }
+                            else
+                            {
+                                Session.Character.Gold = maxGold;
+                                Session.SendPacket(UserInterfaceHelper.Instance.GenerateMsg(Language.Instance.GetMessageFromKey("MAX_GOLD"), 0));
+                            }
+                            Session.SendPacket(Session.Character.GenerateGold());
+                            Session.CurrentMapInstance.DroppedList.Remove(getPacket.TransportId);
+                            Session.CurrentMapInstance?.Broadcast(Session.Character.GenerateGet(getPacket.TransportId));
                         }
-                    }
-                    else
-                    {
-                        // handle gold drop
-                        MonsterMapItem droppedGold = mapItem as MonsterMapItem;
-                        if (droppedGold != null && Session.Character.Gold + droppedGold.GoldAmount <= 1000000000)
-                        {
-                            Session.Character.Gold += droppedGold.GoldAmount;
-                            Session.SendPacket(Session.Character.GenerateSay($"{Language.Instance.GetMessageFromKey("ITEM_ACQUIRED")}: {mapItem.GetItemInstance().Item.Name} x {droppedGold.GoldAmount}", 12));
-                        }
-                        else
-                        {
-                            Session.Character.Gold = 1000000000;
-                            Session.SendPacket(Session.Character.GenerateMsg(Language.Instance.GetMessageFromKey("MAX_GOLD"), 0));
-                        }
-                        Session.SendPacket(Session.Character.GenerateGold());
-                        Session.CurrentMap.DroppedList.Remove(packet.TransportId);
-                        TransportFactory.Instance.RemoveTransportId(packet.TransportId);
-                        Session.CurrentMap?.Broadcast(Session.Character.GenerateGet(packet.TransportId));
                     }
                 }
             }
         }
 
         /// <summary>
-        /// mve
+        /// mve packet
         /// </summary>
-        /// <param name="packet"></param>
-        public void MoveEquipment(MvePacket packet)
+        /// <param name="mvePacket"></param>
+        public void MoveEquipment(MvePacket mvePacket)
         {
-            Logger.Debug(packet.ToString(), Session.SessionId);
+            Logger.Debug(Session.Character.GenerateIdentity(), mvePacket.ToString());
             lock (Session.Character.Inventory)
             {
-                if (packet.DestinationSlot > 48 + (Session.Character.Backpack * 12))
+                if (mvePacket.DestinationSlot > 48 + (Session.Character.HaveBackpack() ? 1 : 0) * 12)
                 {
                     return;
                 }
@@ -641,33 +652,33 @@ namespace OpenNos.Handler
                 {
                     return;
                 }
-                ItemInstance sourceItem = Session.Character.Inventory.LoadBySlotAndType(packet.Slot, packet.InventoryType);
-                if ((sourceItem != null && sourceItem.Item.ItemType == ItemType.Specialist) || (sourceItem != null && sourceItem.Item.ItemType == ItemType.Fashion))
+                ItemInstance sourceItem = Session.Character.Inventory.LoadBySlotAndType(mvePacket.Slot, mvePacket.InventoryType);
+                if (sourceItem != null && sourceItem.Item.ItemType == ItemType.Specialist || sourceItem != null && sourceItem.Item.ItemType == ItemType.Fashion)
                 {
-                    ItemInstance inv = Session.Character.Inventory.MoveInInventory(packet.Slot, packet.InventoryType, packet.DestinationInventoryType, packet.DestinationSlot, false);
+                    ItemInstance inv = Session.Character.Inventory.MoveInInventory(mvePacket.Slot, mvePacket.InventoryType, mvePacket.DestinationInventoryType, mvePacket.DestinationSlot, false);
                     if (inv != null)
                     {
-                        Session.SendPacket(Session.Character.GenerateInventoryAdd(inv.ItemVNum, inv.Amount, packet.DestinationInventoryType, inv.Slot, inv.Rare, inv.Design, inv.Upgrade, 0));
-                        Session.SendPacket(Session.Character.GenerateInventoryAdd(-1, 0, packet.InventoryType, packet.Slot, 0, 0, 0, 0));
+                        Session.SendPacket(inv.GenerateInventoryAdd());
+                        Session.SendPacket(UserInterfaceHelper.Instance.GenerateInventoryRemove(mvePacket.InventoryType, mvePacket.Slot));
                     }
                 }
             }
         }
 
         /// <summary>
-        /// mvi
+        /// mvi packet
         /// </summary>
-        /// <param name="packet"></param>
-        public void MoveItem(MviPacket packet)
+        /// <param name="mviPacket"></param>
+        public void MoveItem(MviPacket mviPacket)
         {
-            Logger.Debug(packet.ToString(), Session.SessionId);
+            Logger.Debug(Session.Character.GenerateIdentity(), mviPacket.ToString());
             lock (Session.Character.Inventory)
             {
                 ItemInstance previousInventory;
                 ItemInstance newInventory;
 
                 // check if the destination slot is out of range
-                if (packet.DestinationSlot > 48 + (Session.Character.Backpack * 12))
+                if (mviPacket.DestinationSlot > 48 + (Session.Character.HaveBackpack() ? 1 : 0) * 12)
                 {
                     return;
                 }
@@ -679,143 +690,190 @@ namespace OpenNos.Handler
                 }
 
                 // actually move the item from source to destination
-                Session.Character.Inventory.MoveItem(packet.InventoryType, packet.Slot, packet.Amount, packet.DestinationSlot, out previousInventory, out newInventory);
+                Session.Character.Inventory.MoveItem(mviPacket.InventoryType, mviPacket.InventoryType, mviPacket.Slot, mviPacket.Amount, mviPacket.DestinationSlot, out previousInventory, out newInventory);
                 if (newInventory == null)
                 {
                     return;
                 }
-                Session.SendPacket(Session.Character.GenerateInventoryAdd(newInventory.ItemVNum, newInventory.Amount, packet.InventoryType, newInventory.Slot, newInventory.Rare, newInventory.Design, newInventory.Upgrade, 0));
+                Session.SendPacket(newInventory.GenerateInventoryAdd());
 
                 Session.SendPacket(previousInventory != null
-                    ? Session.Character.GenerateInventoryAdd(previousInventory.ItemVNum, previousInventory.Amount,
-                        packet.InventoryType, previousInventory.Slot, previousInventory.Rare, previousInventory.Design,
-                        previousInventory.Upgrade, 0)
-                    : Session.Character.GenerateInventoryAdd(-1, 0, packet.InventoryType, packet.Slot, 0, 0, 0, 0));
+                    ? previousInventory.GenerateInventoryAdd()
+                    : UserInterfaceHelper.Instance.GenerateInventoryRemove(mviPacket.InventoryType, mviPacket.Slot));
             }
         }
 
         /// <summary>
-        /// put
+        /// put packet
         /// </summary>
-        /// <param name="packet"></param>
-        public void PutItem(PutPacket packet)
+        /// <param name="putPacket"></param>
+        public void PutItem(PutPacket putPacket)
         {
-            Logger.Debug(packet.ToString(), Session.SessionId);
+            Logger.Debug(Session.Character.GenerateIdentity(), putPacket.ToString());
             lock (Session.Character.Inventory)
             {
-                ItemInstance invitem = Session.Character.Inventory.LoadBySlotAndType(packet.Slot, packet.InventoryType);
-                if (invitem != null && invitem.Item.IsDroppable && invitem.Item.IsTradable && !Session.Character.InExchangeOrTrade)
+                ItemInstance invitem = Session.Character.Inventory.LoadBySlotAndType(putPacket.Slot, putPacket.InventoryType);
+                if (invitem != null && invitem.Item.IsDroppable && invitem.Item.IsTradable && !Session.Character.InExchangeOrTrade && putPacket.InventoryType != InventoryType.Bazaar)
                 {
-                    if (packet.Amount > 0 && packet.Amount < 100)
+                    if (putPacket.Amount > 0 && putPacket.Amount < 100)
                     {
-                        if (ServerManager.GetMap(Session.Character.MapId).DroppedList.GetAllItems().Count < 200 && Session.HasCurrentMap)
+                        if (Session.Character.MapInstance.DroppedList.GetAllItems().Count < 200 && Session.HasCurrentMapInstance)
                         {
-                            MapItem droppedItem = Session.CurrentMap.PutItem(packet.InventoryType, packet.Slot, packet.Amount, ref invitem, Session);
+                            MapItem droppedItem = Session.CurrentMapInstance.PutItem(putPacket.InventoryType, putPacket.Slot, putPacket.Amount, ref invitem, Session);
                             if (droppedItem == null)
                             {
-                                Session.SendPacket(Session.Character.GenerateMsg(Language.Instance.GetMessageFromKey("ITEM_NOT_DROPPABLE_HERE"), 0));
+                                Session.SendPacket(UserInterfaceHelper.Instance.GenerateMsg(Language.Instance.GetMessageFromKey("ITEM_NOT_DROPPABLE_HERE"), 0));
                                 return;
                             }
-                            Session.SendPacket(Session.Character.GenerateInventoryAdd(invitem.ItemVNum, invitem.Amount, packet.InventoryType, invitem.Slot, invitem.Rare, invitem.Design, invitem.Upgrade, 0));
+                            Session.SendPacket(invitem.GenerateInventoryAdd());
 
                             if (invitem.Amount == 0)
                             {
                                 Session.Character.DeleteItem(invitem.Type, invitem.Slot);
                             }
-                            Session.CurrentMap?.Broadcast($"drop {droppedItem.ItemVNum} {droppedItem.TransportId} {droppedItem.PositionX} {droppedItem.PositionY} {droppedItem.Amount} 0 -1");
+                            Session.CurrentMapInstance?.Broadcast($"drop {droppedItem.ItemVNum} {droppedItem.TransportId} {droppedItem.PositionX} {droppedItem.PositionY} {droppedItem.Amount} 0 -1");
                         }
                         else
                         {
-                            Session.SendPacket(Session.Character.GenerateMsg(Language.Instance.GetMessageFromKey("DROP_MAP_FULL"), 0));
+                            Session.SendPacket(UserInterfaceHelper.Instance.GenerateMsg(Language.Instance.GetMessageFromKey("DROP_MAP_FULL"), 0));
                         }
                     }
                     else
                     {
-                        Session.SendPacket(Session.Character.GenerateMsg(Language.Instance.GetMessageFromKey("BAD_DROP_AMOUNT"), 0));
+                        Session.SendPacket(UserInterfaceHelper.Instance.GenerateMsg(Language.Instance.GetMessageFromKey("BAD_DROP_AMOUNT"), 0));
                     }
                 }
                 else
                 {
-                    Session.SendPacket(Session.Character.GenerateMsg(Language.Instance.GetMessageFromKey("ITEM_NOT_DROPPABLE"), 0));
+                    Session.SendPacket(UserInterfaceHelper.Instance.GenerateMsg(Language.Instance.GetMessageFromKey("ITEM_NOT_DROPPABLE"), 0));
                 }
             }
         }
 
-        [Packet("remove")]
-        public void Remove(string packet)
+        /// <summary>
+        /// remove packet
+        /// </summary>
+        /// <param name="removePacket"></param>
+        public void Remove(RemovePacket removePacket)
         {
-            Logger.Debug(packet, Session.SessionId);
-            short slot;
-            string[] packetsplit = packet.Split(' ');
-            if (packetsplit.Length > 3 && Session.HasCurrentMap && Session.CurrentMap.UserShops.FirstOrDefault(mapshop => mapshop.Value.OwnerId.Equals(Session.Character.CharacterId)).Value == null && (Session.Character.ExchangeInfo == null || !(Session.Character.ExchangeInfo?.ExchangeList).Any()) && short.TryParse(packetsplit[2], out slot))
+            Logger.Debug(Session.Character.GenerateIdentity(), removePacket.ToString());
+            InventoryType equipment;
+            Mate mate = null;
+            switch (removePacket.Type)
             {
-                ItemInstance inventory = (slot != (byte)EquipmentType.Sp) ? Session.Character.Inventory.LoadBySlotAndType<WearableInstance>(slot, InventoryType.Wear) : Session.Character.Inventory.LoadBySlotAndType<SpecialistInstance>(slot, InventoryType.Wear);
+                case 1:
+                    equipment = InventoryType.FirstPartnerInventory;
+                    mate = Session.Character.Mates.FirstOrDefault(s => s.PetId == removePacket.Type - 1);
+                    break;
+
+                case 2:
+                    equipment = InventoryType.SecondPartnerInventory;
+                    mate = Session.Character.Mates.FirstOrDefault(s => s.PetId == removePacket.Type - 1);
+                    break;
+
+                case 3:
+                    equipment = InventoryType.ThirdPartnerInventory;
+                    mate = Session.Character.Mates.FirstOrDefault(s => s.PetId == removePacket.Type - 1);
+                    break;
+
+                default:
+                    equipment = InventoryType.Wear;
+                    break;
+            }
+
+            if (Session.HasCurrentMapInstance && Session.CurrentMapInstance.UserShops.FirstOrDefault(mapshop => mapshop.Value.OwnerId.Equals(Session.Character.CharacterId)).Value == null && (Session.Character.ExchangeInfo == null || !(Session.Character.ExchangeInfo?.ExchangeList).Any()))
+            {
+                ItemInstance inventory = removePacket.InventorySlot != (byte)EquipmentType.Sp ? Session.Character.Inventory.LoadBySlotAndType<WearableInstance>(removePacket.InventorySlot, equipment) : Session.Character.Inventory.LoadBySlotAndType<SpecialistInstance>(removePacket.InventorySlot, equipment);
                 if (inventory != null)
                 {
                     double currentRunningSeconds = (DateTime.Now - Process.GetCurrentProcess().StartTime.AddSeconds(-50)).TotalSeconds;
                     double timeSpanSinceLastSpUsage = currentRunningSeconds - Session.Character.LastSp;
-                    if (slot == (byte)EquipmentType.Sp && Session.Character.UseSp)
+                    if (removePacket.Type == 0)
                     {
-                        if (Session.Character.IsVehicled)
+                        if (removePacket.InventorySlot == (byte)EquipmentType.Sp && Session.Character.UseSp)
                         {
-                            Session.SendPacket(Session.Character.GenerateMsg(Language.Instance.GetMessageFromKey("REMOVE_VEHICLE"), 0));
+                            if (Session.Character.IsVehicled)
+                            {
+                                Session.SendPacket(UserInterfaceHelper.Instance.GenerateMsg(Language.Instance.GetMessageFromKey("REMOVE_VEHICLE"), 0));
+                                return;
+                            }
+                            if (Session.Character.LastSkillUse.AddSeconds(2) > DateTime.Now)
+                            {
+                                return;
+                            }
+                            Session.Character.LastSp = (DateTime.Now - Process.GetCurrentProcess().StartTime.AddSeconds(-50)).TotalSeconds;
+                            RemoveSP(inventory.ItemVNum);
+                        }
+                        else if (removePacket.InventorySlot == (byte)EquipmentType.Sp && !Session.Character.UseSp && timeSpanSinceLastSpUsage <= Session.Character.SpCooldown)
+                        {
+                            Session.SendPacket(UserInterfaceHelper.Instance.GenerateMsg(string.Format(Language.Instance.GetMessageFromKey("SP_INLOADING"), Session.Character.SpCooldown - (int)Math.Round(timeSpanSinceLastSpUsage, 0)), 0));
                             return;
                         }
-                        if (Session.Character.LastSkillUse.AddSeconds(2) > DateTime.Now)
-                        {
-                            return;
-                        }
-                        Session.Character.LastSp = (DateTime.Now - Process.GetCurrentProcess().StartTime.AddSeconds(-50)).TotalSeconds;
-                        RemoveSP(inventory.ItemVNum);
-                    }
-                    else if (slot == (byte)EquipmentType.Sp && !Session.Character.UseSp && timeSpanSinceLastSpUsage <= Session.Character.SpCooldown)
-                    {
-                        Session.SendPacket(Session.Character.GenerateMsg(string.Format(Language.Instance.GetMessageFromKey("SP_INLOADING"), Session.Character.SpCooldown - (int)Math.Round(timeSpanSinceLastSpUsage, 0)), 0));
-                        return;
                     }
 
-                    ItemInstance inv = Session.Character.Inventory.MoveInInventory(slot, InventoryType.Wear, InventoryType.Equipment);
+                    ItemInstance inv = Session.Character.Inventory.MoveInInventory(removePacket.InventorySlot, equipment, InventoryType.Equipment);
 
                     if (inv == null)
                     {
-                        Session.SendPacket(Session.Character.GenerateMsg(Language.Instance.GetMessageFromKey("NOT_ENOUGH_PLACE"), 0));
+                        Session.SendPacket(UserInterfaceHelper.Instance.GenerateMsg(Language.Instance.GetMessageFromKey("NOT_ENOUGH_PLACE"), 0));
                         return;
                     }
 
                     if (inv.Slot != -1)
                     {
-                        Session.SendPacket(Session.Character.GenerateInventoryAdd(inventory.ItemVNum, inv.Amount, inv.Type, inv.Slot, inventory.Rare, inventory.Design, inventory.Upgrade, 0));
+                        Session.SendPacket(inventory.GenerateInventoryAdd());
                     }
-
-                    Session.SendPacket(Session.Character.GenerateStatChar());
-                    Session.CurrentMap?.Broadcast(Session.Character.GenerateEq());
-                    Session.SendPacket(Session.Character.GenerateEquipment());
-                    Session.CurrentMap?.Broadcast(Session.Character.GeneratePairy());
+                    if (removePacket.Type == 0)
+                    {
+                        Session.SendPacket(Session.Character.GenerateStatChar());
+                        Session.CurrentMapInstance?.Broadcast(Session.Character.GenerateEq());
+                        Session.SendPacket(Session.Character.GenerateEquipment());
+                        Session.CurrentMapInstance?.Broadcast(Session.Character.GeneratePairy());
+                    }
+                    else if (mate != null)
+                    {
+                        Session.SendPacket(mate.GenerateScPacket());
+                    }
                 }
             }
         }
 
-        [Packet("#sl")]
-        public void Sl(string packet)
+        /// <summary>
+        /// repos packet
+        /// </summary>
+        /// <param name="reposPacket"></param>
+        public void Repos(ReposPacket reposPacket)
         {
-            Logger.Debug(packet, Session.SessionId);
-            string[] packetsplit = packet.Split(' ', '^');
-            byte mode;
-            if (byte.TryParse(packetsplit[2], out mode) && !Session.Character.UseSp && !Session.Character.IsVehicled)
+            ItemInstance previousInventory;
+            ItemInstance newInventory;
+
+            // check if the destination slot is out of range
+            if (reposPacket.NewSlot >= (reposPacket.PartnerBackpack ? (Session.Character.StaticBonusList.Any(s => s.StaticBonusType == StaticBonusType.PetBackPack) ? 50 : 0) : Session.Character.WareHouseSize))
             {
-                double currentRunningSeconds = (DateTime.Now - Process.GetCurrentProcess().StartTime.AddSeconds(-50)).TotalSeconds;
-                double timeSpanSinceLastSpUsage = currentRunningSeconds - Session.Character.LastSp;
-                if (timeSpanSinceLastSpUsage >= Session.Character.SpCooldown)
-                {
-                    ChangeSP();
-                }
+                return;
             }
+
+            // check if the character is allowed to move the item
+            if (Session.Character.InExchangeOrTrade)
+            {
+                return;
+            }
+
+            // actually move the item from source to destination
+            Session.Character.Inventory.MoveItem(reposPacket.PartnerBackpack ? InventoryType.PetWarehouse : InventoryType.Warehouse, reposPacket.PartnerBackpack ? InventoryType.PetWarehouse : InventoryType.Warehouse, reposPacket.OldSlot, reposPacket.Amount, reposPacket.NewSlot, out previousInventory, out newInventory);
+            if (newInventory == null)
+            {
+                return;
+            }
+
+            Session.SendPacket(reposPacket.PartnerBackpack ? newInventory.GeneratePStash() : newInventory.GenerateStash());
+            Session.SendPacket(previousInventory != null ? (reposPacket.PartnerBackpack ? previousInventory.GeneratePStash() : previousInventory.GenerateStash()) : (reposPacket.PartnerBackpack ? UserInterfaceHelper.Instance.GeneratePStashRemove(reposPacket.OldSlot) : UserInterfaceHelper.Instance.GenerateStashRemove(reposPacket.OldSlot)));
         }
 
         [Packet("sortopen")]
         public void SortOpen(string packet)
         {
-            Logger.Debug(packet, Session.SessionId);
+            Logger.Debug(Session.Character.GenerateIdentity(), packet);
             bool gravity = true;
             while (gravity)
             {
@@ -831,11 +889,11 @@ namespace OpenNos.Handler
                             {
                                 ItemInstance invdest;
                                 ItemInstance inv;
-                                Session.Character.Inventory.MoveItem(type, (short)(x + 1), 1, x, out inv, out invdest);
+                                Session.Character.Inventory.MoveItem(type, type, (short)(x + 1), 1, x, out inv, out invdest);
                                 WearableInstance wearableInstance = invdest as WearableInstance;
                                 if (wearableInstance != null)
                                 {
-                                    Session.SendPacket(Session.Character.GenerateInventoryAdd(invdest.ItemVNum, invdest.Amount, type, invdest.Slot, wearableInstance.Rare, wearableInstance.Design, wearableInstance.Upgrade, 0));
+                                    Session.SendPacket(invdest.GenerateInventoryAdd());
                                 }
                                 Session.Character.DeleteItem(type, (short)(x + 1));
                                 gravity = true;
@@ -847,31 +905,56 @@ namespace OpenNos.Handler
             }
         }
 
-        [Packet("#u_i")]
-        public void SpecialUseItem(string packet)
+        /// <summary>
+        /// s_carrier packet
+        /// </summary>
+        /// <param name="specialistHolderPacket"></param>
+        public void SpecialistHolder(SpecialistHolderPacket specialistHolderPacket)
         {
-            UseItem(packet);
+            Logger.Debug(Session.Character.GenerateIdentity(), specialistHolderPacket.ToString());
+            SpecialistInstance specialist = Session.Character.Inventory.LoadBySlotAndType<SpecialistInstance>(specialistHolderPacket.Slot, InventoryType.Equipment);
+            BoxInstance holder = Session.Character.Inventory.LoadBySlotAndType<BoxInstance>(specialistHolderPacket.HolderSlot, InventoryType.Equipment);
+            if (specialist != null && holder != null)
+            {
+                holder.HoldingVNum = specialist.ItemVNum;
+                holder.SlDamage = specialist.SlDamage;
+                holder.SlDefence = specialist.SlDefence;
+                holder.SlElement = specialist.SlElement;
+                holder.SlHP = specialist.SlHP;
+                holder.SpDamage = specialist.SpDamage;
+                holder.SpDark = specialist.SpDark;
+                holder.SpDefence = specialist.SpDefence;
+                holder.SpElement = specialist.SpElement;
+                holder.SpFire = specialist.SpFire;
+                holder.SpHP = specialist.SpHP;
+                holder.SpLevel = specialist.SpLevel;
+                holder.SpLight = specialist.SpLight;
+                holder.SpStoneUpgrade = specialist.SpStoneUpgrade;
+                holder.SpWater = specialist.SpWater;
+                holder.Upgrade = specialist.Upgrade;
+                holder.XP = specialist.XP;
+                Session.SendPacket("shop_end 2");
+                Session.Character.Inventory.RemoveItemAmountFromInventory(1, specialist.Id);
+            }
         }
 
-        [Packet("sl")]
-        public void SpTransform(string packet)
+        /// <summary>
+        /// sl packet
+        /// </summary>
+        /// <param name="spTransformPacket"></param>
+        public void SpTransform(SpTransformPacket spTransformPacket)
         {
-            Logger.Debug(packet, Session.SessionId);
-            string[] packetsplit = packet.Split(' ');
+            Logger.Debug(Session.Character.GenerateIdentity(), spTransformPacket.ToString());
 
             SpecialistInstance specialistInstance = Session.Character.Inventory.LoadBySlotAndType<SpecialistInstance>((byte)EquipmentType.Sp, InventoryType.Wear);
 
-            if (packetsplit.Length == 10 && packetsplit[2] == "10")
+            if (spTransformPacket.Type == 10)
             {
-                short specialistDamage, specialistDefense, specialistElement, specialistHealpoints;
-                int transportId;
-                if (!int.TryParse(packetsplit[5], out transportId) || !short.TryParse(packetsplit[6], out specialistDamage) || !short.TryParse(packetsplit[7], out specialistDefense) || !short.TryParse(packetsplit[8], out specialistElement) || !short.TryParse(packetsplit[9], out specialistHealpoints))
-                {
-                    return;
-                }
+                short specialistDamage = spTransformPacket.SpecialistDamage, specialistDefense = spTransformPacket.SpecialistDefense, specialistElement = spTransformPacket.SpecialistElement, specialistHealpoints = spTransformPacket.SpecialistHP;
+                int transportId = spTransformPacket.TransportId;
                 if (!Session.Character.UseSp || specialistInstance == null || transportId != specialistInstance.TransportId)
                 {
-                    Session.SendPacket(Session.Character.GenerateMsg(Language.Instance.GetMessageFromKey("SPUSE_NEEDED"), 0));
+                    Session.SendPacket(UserInterfaceHelper.Instance.GenerateMsg(Language.Instance.GetMessageFromKey("SPUSE_NEEDED"), 0));
                     return;
                 }
                 if (CharacterHelper.SPPoint(specialistInstance.SpLevel, specialistInstance.Upgrade) - specialistInstance.SlDamage - specialistInstance.SlHP - specialistInstance.SlElement - specialistInstance.SlDefence - specialistDamage - specialistDefense - specialistElement - specialistHealpoints < 0)
@@ -908,6 +991,8 @@ namespace OpenNos.Handler
                 specialistInstance.FireResistance = 0;
                 specialistInstance.WaterResistance = 0;
                 specialistInstance.CriticalDodge = 0;
+                specialistInstance.CloseDefence = 0;
+                specialistInstance.DistanceDefence = 0;
                 specialistInstance.MagicDefence = 0;
                 specialistInstance.HP = 0;
                 specialistInstance.MP = 0;
@@ -1294,24 +1379,24 @@ namespace OpenNos.Handler
 
                 Session.SendPacket(Session.Character.GenerateStatChar());
                 Session.SendPacket(Session.Character.GenerateStat());
-                Session.SendPacket(Session.Character.GenerateSlInfo(specialistInstance, 2));
-                Session.SendPacket(Session.Character.GenerateMsg(Language.Instance.GetMessageFromKey("POINTS_SET"), 0));
+                Session.SendPacket(specialistInstance.GenerateSlInfo());
+                Session.SendPacket(UserInterfaceHelper.Instance.GenerateMsg(Language.Instance.GetMessageFromKey("POINTS_SET"), 0));
             }
             else if (!Session.Character.IsSitting)
             {
                 if (Session.Character.Skills.GetAllItems().Any(s => !s.CanBeUsed()))
                 {
-                    Session.SendPacket(Session.Character.GenerateMsg(Language.Instance.GetMessageFromKey("SKILLS_IN_LOADING"), 0));
+                    Session.SendPacket(UserInterfaceHelper.Instance.GenerateMsg(Language.Instance.GetMessageFromKey("SKILLS_IN_LOADING"), 0));
                     return;
                 }
                 if (specialistInstance == null)
                 {
-                    Session.SendPacket(Session.Character.GenerateMsg(Language.Instance.GetMessageFromKey("NO_SP"), 0));
+                    Session.SendPacket(UserInterfaceHelper.Instance.GenerateMsg(Language.Instance.GetMessageFromKey("NO_SP"), 0));
                     return;
                 }
                 if (Session.Character.IsVehicled)
                 {
-                    Session.SendPacket(Session.Character.GenerateMsg(Language.Instance.GetMessageFromKey("REMOVE_VEHICLE"), 0));
+                    Session.SendPacket(UserInterfaceHelper.Instance.GenerateMsg(Language.Instance.GetMessageFromKey("REMOVE_VEHICLE"), 0));
                     return;
                 }
 
@@ -1330,227 +1415,258 @@ namespace OpenNos.Handler
                     }
                     if (Session.Character.SpPoint == 0 && Session.Character.SpAdditionPoint == 0)
                     {
-                        Session.SendPacket(Session.Character.GenerateMsg(Language.Instance.GetMessageFromKey("SP_NOPOINTS"), 0));
+                        Session.SendPacket(UserInterfaceHelper.Instance.GenerateMsg(Language.Instance.GetMessageFromKey("SP_NOPOINTS"), 0));
                     }
                     double timeSpanSinceLastSpUsage = currentRunningSeconds - Session.Character.LastSp;
                     if (timeSpanSinceLastSpUsage >= Session.Character.SpCooldown)
                     {
-                        Session.SendPacket(Session.Character.GenerateDelay(5000, 3, "#sl^1"));
-                        Session.CurrentMap?.Broadcast(Session.Character.GenerateGuri(2, 1), Session.Character.MapX, Session.Character.MapY);
+                        // TODO: add check on packetheader instead of this type check, way to abuse
+                        if (spTransformPacket.Type == 1)
+                        {
+                            DateTime delay = DateTime.Now.AddSeconds(-6);
+                            if (Session.Character.LastDelay > delay && Session.Character.LastDelay < delay.AddSeconds(2))
+                            {
+                                ChangeSP();
+                            }
+                        }
+                        else
+                        {
+                            Session.Character.LastDelay = DateTime.Now;
+                            Session.SendPacket(UserInterfaceHelper.Instance.GenerateDelay(5000, 3, "#sl^1"));
+                            Session.CurrentMapInstance?.Broadcast(UserInterfaceHelper.Instance.GenerateGuri(2, 1, Session.Character.CharacterId), Session.Character.PositionX, Session.Character.PositionY);
+                        }
                     }
                     else
                     {
-                        Session.SendPacket(Session.Character.GenerateMsg(string.Format(Language.Instance.GetMessageFromKey("SP_INLOADING"), Session.Character.SpCooldown - (int)Math.Round(timeSpanSinceLastSpUsage, 0)), 0));
+                        Session.SendPacket(UserInterfaceHelper.Instance.GenerateMsg(string.Format(Language.Instance.GetMessageFromKey("SP_INLOADING"), Session.Character.SpCooldown - (int)Math.Round(timeSpanSinceLastSpUsage, 0)), 0));
                     }
                 }
             }
         }
 
-        [Packet("up_gr")]
-        public void Upgrade(string packet)
+        /// <summary>
+        /// up_gr packet
+        /// </summary>
+        /// <param name="upgradePacket"></param>
+        public void Upgrade(UpgradePacket upgradePacket)
         {
-            Logger.Debug(packet, Session.SessionId);
-            string[] packetsplit = packet.Split(' ');
-            if ((Session.Character.ExchangeInfo != null && Session.Character.ExchangeInfo.ExchangeList.Any()) || Session.Character.Speed == 0)
+            Logger.Debug(Session.Character.GenerateIdentity(), upgradePacket.ToString());
+            if (Session.Character.ExchangeInfo != null && Session.Character.ExchangeInfo.ExchangeList.Any() || Session.Character.Speed == 0)
             {
                 return;
             }
-            if (packetsplit.Length > 4)
+            if (Session.Character.LastDelay.AddSeconds(5) > DateTime.Now)
             {
-                InventoryType inventoryType, type2 = 0;
-                byte uptype, slot, slot2 = 0;
-                byte.TryParse(packetsplit[2], out uptype);
-                Enum.TryParse(packetsplit[3], out inventoryType);
-                byte.TryParse(packetsplit[4], out slot);
-
-                if (packetsplit.Length > 6)
-                {
-                    Enum.TryParse(packetsplit[5], out type2);
-                    byte.TryParse(packetsplit[6], out slot2);
-                }
-                WearableInstance inventory;
-                switch (uptype)
-                {
-                    case 1:
-                        inventory = Session.Character.Inventory.LoadBySlotAndType<WearableInstance>(slot, inventoryType);
-                        if (inventory != null)
+                return;
+            }
+            InventoryType inventoryType = upgradePacket.InventoryType;
+            byte uptype = upgradePacket.UpgradeType, slot = upgradePacket.Slot;
+            Session.Character.LastDelay = DateTime.Now;
+            WearableInstance inventory;
+            switch (uptype)
+            {
+                case 1:
+                    inventory = Session.Character.Inventory.LoadBySlotAndType<WearableInstance>(slot, inventoryType);
+                    if (inventory != null)
+                    {
+                        if (inventory.Item.EquipmentSlot == EquipmentType.Armor || inventory.Item.EquipmentSlot == EquipmentType.MainWeapon || inventory.Item.EquipmentSlot == EquipmentType.SecondaryWeapon)
                         {
-                            if (inventory.Item.EquipmentSlot == EquipmentType.Armor || inventory.Item.EquipmentSlot == EquipmentType.MainWeapon || inventory.Item.EquipmentSlot == EquipmentType.SecondaryWeapon)
-                            {
-                                inventory.UpgradeItem(Session, UpgradeMode.Normal, UpgradeProtection.None);
-                            }
+                            inventory.UpgradeItem(Session, UpgradeMode.Normal, UpgradeProtection.None);
                         }
-                        break;
+                    }
+                    break;
 
-                    case 7:
-                        inventory = Session.Character.Inventory.LoadBySlotAndType<WearableInstance>(slot, inventoryType);
-                        if (inventory != null)
+                case 7:
+                    inventory = Session.Character.Inventory.LoadBySlotAndType<WearableInstance>(slot, inventoryType);
+                    if (inventory != null)
+                    {
+                        if (inventory.Item.EquipmentSlot == EquipmentType.Armor || inventory.Item.EquipmentSlot == EquipmentType.MainWeapon || inventory.Item.EquipmentSlot == EquipmentType.SecondaryWeapon)
                         {
-                            if (inventory.Item.EquipmentSlot == EquipmentType.Armor || inventory.Item.EquipmentSlot == EquipmentType.MainWeapon || inventory.Item.EquipmentSlot == EquipmentType.SecondaryWeapon)
-                            {
-                                inventory.RarifyItem(Session, RarifyMode.Normal, RarifyProtection.None);
-                            }
-                            Session.SendPacket("shop_end 1");
+                            inventory.RarifyItem(Session, RarifyMode.Normal, RarifyProtection.None);
                         }
-                        break;
+                        Session.SendPacket("shop_end 1");
+                    }
+                    break;
 
-                    case 8:
-                        inventory = Session.Character.Inventory.LoadBySlotAndType<WearableInstance>(slot, inventoryType);
-                        WearableInstance inventory2 = Session.Character.Inventory.LoadBySlotAndType<WearableInstance>(slot2, type2);
+                case 8:
+                    inventory = Session.Character.Inventory.LoadBySlotAndType<WearableInstance>(slot, inventoryType);
+                    if (upgradePacket.InventoryType2 != null && upgradePacket.Slot2 != null)
+                    {
+                        WearableInstance inventory2 = Session.Character.Inventory.LoadBySlotAndType<WearableInstance>((byte)upgradePacket.Slot2, (InventoryType)upgradePacket.InventoryType2);
 
                         if (inventory != null && inventory2 != null && !Equals(inventory, inventory2))
                         {
                             inventory.Sum(Session, inventory2);
                         }
-                        break;
+                    }
+                    break;
 
-                    case 9:
-                        SpecialistInstance specialist = Session.Character.Inventory.LoadBySlotAndType<SpecialistInstance>(slot, inventoryType);
-                        if (specialist != null)
+                case 9:
+                    SpecialistInstance specialist = Session.Character.Inventory.LoadBySlotAndType<SpecialistInstance>(slot, inventoryType);
+                    if (specialist != null)
+                    {
+                        if (specialist.Rare != -2)
                         {
-                            if (specialist.Rare != -2)
+                            if (specialist.Item.EquipmentSlot == EquipmentType.Sp)
                             {
-                                if (specialist.Item.EquipmentSlot == EquipmentType.Sp)
-                                {
-                                    specialist.UpgradeSp(Session, UpgradeProtection.None);
-                                }
-                            }
-                            else
-                            {
-                                Session.SendPacket(Session.Character.GenerateMsg(Language.Instance.GetMessageFromKey("CANT_UPGRADE_DESTROYED_SP"), 0));
+                                specialist.UpgradeSp(Session, UpgradeProtection.None);
                             }
                         }
-                        break;
-
-                    case 20:
-                        inventory = Session.Character.Inventory.LoadBySlotAndType<WearableInstance>(slot, inventoryType);
-                        if (inventory != null)
+                        else
                         {
-                            if (inventory.Item.EquipmentSlot == EquipmentType.Armor || inventory.Item.EquipmentSlot == EquipmentType.MainWeapon || inventory.Item.EquipmentSlot == EquipmentType.SecondaryWeapon)
+                            Session.SendPacket(UserInterfaceHelper.Instance.GenerateMsg(Language.Instance.GetMessageFromKey("CANT_UPGRADE_DESTROYED_SP"), 0));
+                        }
+                    }
+                    break;
+
+                case 20:
+                    inventory = Session.Character.Inventory.LoadBySlotAndType<WearableInstance>(slot, inventoryType);
+                    if (inventory != null)
+                    {
+                        if (inventory.Item.EquipmentSlot == EquipmentType.Armor || inventory.Item.EquipmentSlot == EquipmentType.MainWeapon || inventory.Item.EquipmentSlot == EquipmentType.SecondaryWeapon)
+                        {
+                            inventory.UpgradeItem(Session, UpgradeMode.Normal, UpgradeProtection.Protected);
+                        }
+                    }
+                    break;
+
+                case 21:
+                    inventory = Session.Character.Inventory.LoadBySlotAndType<WearableInstance>(slot, inventoryType);
+                    if (inventory != null)
+                    {
+                        if (inventory.Item.EquipmentSlot == EquipmentType.Armor || inventory.Item.EquipmentSlot == EquipmentType.MainWeapon || inventory.Item.EquipmentSlot == EquipmentType.SecondaryWeapon)
+                        {
+                            inventory.RarifyItem(Session, RarifyMode.Normal, RarifyProtection.Scroll);
+                        }
+                    }
+                    break;
+
+                case 25:
+                    specialist = Session.Character.Inventory.LoadBySlotAndType<SpecialistInstance>(slot, inventoryType);
+                    if (specialist != null)
+                    {
+                        if (specialist.Rare != -2)
+                        {
+                            if (specialist.Item.EquipmentSlot == EquipmentType.Sp)
                             {
-                                inventory.UpgradeItem(Session, UpgradeMode.Normal, UpgradeProtection.Protected);
+                                specialist.UpgradeSp(Session, UpgradeProtection.Protected);
                             }
                         }
-                        break;
-
-                    case 21:
-                        inventory = Session.Character.Inventory.LoadBySlotAndType<WearableInstance>(slot, inventoryType);
-                        if (inventory != null)
+                        else
                         {
-                            if (inventory.Item.EquipmentSlot == EquipmentType.Armor || inventory.Item.EquipmentSlot == EquipmentType.MainWeapon || inventory.Item.EquipmentSlot == EquipmentType.SecondaryWeapon)
+                            Session.SendPacket(UserInterfaceHelper.Instance.GenerateMsg(Language.Instance.GetMessageFromKey("CANT_UPGRADE_DESTROYED_SP"), 0));
+                        }
+                    }
+                    break;
+
+                case 26:
+                    specialist = Session.Character.Inventory.LoadBySlotAndType<SpecialistInstance>(slot, inventoryType);
+                    if (specialist != null)
+                    {
+                        if (specialist.Rare != -2)
+                        {
+                            if (specialist.Item.EquipmentSlot == EquipmentType.Sp)
                             {
-                                inventory.RarifyItem(Session, RarifyMode.Normal, RarifyProtection.Scroll);
+                                specialist.UpgradeSp(Session, UpgradeProtection.Protected);
                             }
                         }
-                        break;
-
-                    case 25:
-                        specialist = Session.Character.Inventory.LoadBySlotAndType<SpecialistInstance>(slot, inventoryType);
-                        if (specialist != null)
+                        else
                         {
-                            if (specialist.Rare != -2)
+                            Session.SendPacket(UserInterfaceHelper.Instance.GenerateMsg(Language.Instance.GetMessageFromKey("CANT_UPGRADE_DESTROYED_SP"), 0));
+                        }
+                    }
+                    break;
+
+                case 41:
+                    specialist = Session.Character.Inventory.LoadBySlotAndType<SpecialistInstance>(slot, inventoryType);
+                    if (specialist != null)
+                    {
+                        if (specialist.Rare != -2)
+                        {
+                            if (specialist.Item.EquipmentSlot == EquipmentType.Sp)
                             {
-                                if (specialist.Item.EquipmentSlot == EquipmentType.Sp)
-                                {
-                                    specialist.UpgradeSp(Session, UpgradeProtection.Protected);
-                                }
-                            }
-                            else
-                            {
-                                Session.SendPacket(Session.Character.GenerateMsg(Language.Instance.GetMessageFromKey("CANT_UPGRADE_DESTROYED_SP"), 0));
+                                specialist.PerfectSP(Session);
                             }
                         }
-                        break;
-
-                    case 26:
-                        specialist = Session.Character.Inventory.LoadBySlotAndType<SpecialistInstance>(slot, inventoryType);
-                        if (specialist != null)
+                        else
                         {
-                            if (specialist.Rare != -2)
-                            {
-                                if (specialist.Item.EquipmentSlot == EquipmentType.Sp)
-                                {
-                                    specialist.UpgradeSp(Session, UpgradeProtection.Protected);
-                                }
-                            }
-                            else
-                            {
-                                Session.SendPacket(Session.Character.GenerateMsg(Language.Instance.GetMessageFromKey("CANT_UPGRADE_DESTROYED_SP"), 0));
-                            }
+                            Session.SendPacket(UserInterfaceHelper.Instance.GenerateMsg(Language.Instance.GetMessageFromKey("CANT_UPGRADE_DESTROYED_SP"), 0));
                         }
-                        break;
+                    }
+                    break;
 
-                    case 41:
-                        specialist = Session.Character.Inventory.LoadBySlotAndType<SpecialistInstance>(slot, inventoryType);
-                        if (specialist != null)
+                case 43:
+                    inventory = Session.Character.Inventory.LoadBySlotAndType<WearableInstance>(slot, inventoryType);
+                    if (inventory != null)
+                    {
+                        if (inventory.Item.EquipmentSlot == EquipmentType.Armor || inventory.Item.EquipmentSlot == EquipmentType.MainWeapon || inventory.Item.EquipmentSlot == EquipmentType.SecondaryWeapon)
                         {
-                            if (specialist.Rare != -2)
-                            {
-                                if (specialist.Item.EquipmentSlot == EquipmentType.Sp)
-                                {
-                                    specialist.PerfectSP(Session, UpgradeProtection.None);
-                                }
-                            }
-                            else
-                            {
-                                Session.SendPacket(Session.Character.GenerateMsg(Language.Instance.GetMessageFromKey("CANT_UPGRADE_DESTROYED_SP"), 0));
-                            }
+                            inventory.UpgradeItem(Session, UpgradeMode.Reduced, UpgradeProtection.Protected);
                         }
-                        break;
-
-                    case 43:
-                        inventory = Session.Character.Inventory.LoadBySlotAndType<WearableInstance>(slot, inventoryType);
-                        if (inventory != null)
-                        {
-                            if (inventory.Item.EquipmentSlot == EquipmentType.Armor || inventory.Item.EquipmentSlot == EquipmentType.MainWeapon || inventory.Item.EquipmentSlot == EquipmentType.SecondaryWeapon)
-                            {
-                                inventory.UpgradeItem(Session, UpgradeMode.Reduced, UpgradeProtection.Protected);
-                            }
-                        }
-                        break;
-                }
+                    }
+                    break;
             }
         }
 
         [Packet("u_i")]
         public void UseItem(string packet)
         {
-            Logger.Debug(packet, Session.SessionId);
+            Logger.Debug(Session.Character.GenerateIdentity(), packet);
             string[] packetsplit = packet.Split(' ', '^');
             short slot;
             byte type;
             if (packetsplit.Length > 5 && short.TryParse(packetsplit[5], out slot) && byte.TryParse(packetsplit[4], out type))
             {
                 ItemInstance inv = Session.Character.Inventory.LoadBySlotAndType(slot, (InventoryType)type);
-                inv?.Item.Use(Session, ref inv, packetsplit[1].ElementAt(0) == '#', packetsplit);
+                inv?.Item.Use(Session, ref inv, packetsplit[1].ElementAt(0) == '#' ? (byte)255 : (byte)0, packetsplit);
             }
         }
 
-        [Packet("wear")]
-        public void Wear(string packet)
+        /// <summary>
+        /// wear packet
+        /// </summary>
+        /// <param name="wearPacket"></param>
+        public void Wear(WearPacket wearPacket)
         {
-            Logger.Debug(packet, Session.SessionId);
-            string[] packetsplit = packet.Split(' ');
-            if ((Session.Character.ExchangeInfo != null && Session.Character.ExchangeInfo.ExchangeList.Any()) || Session.Character.Speed == 0)
+            Logger.Debug(Session.Character.GenerateIdentity(), wearPacket.ToString());
+            if (Session.Character.ExchangeInfo != null && Session.Character.ExchangeInfo.ExchangeList.Any() || Session.Character.Speed == 0)
             {
                 return;
             }
-            if (packetsplit.Length > 3 && Session.HasCurrentMap && Session.CurrentMap.UserShops.FirstOrDefault(mapshop => mapshop.Value.OwnerId.Equals(Session.Character.CharacterId)).Value == null)
+            if (Session.HasCurrentMapInstance && Session.CurrentMapInstance.UserShops.FirstOrDefault(mapshop => mapshop.Value.OwnerId.Equals(Session.Character.CharacterId)).Value == null)
             {
-                InventoryType type;
-                short slot;
-                if (Enum.TryParse(packetsplit[3], out type) && short.TryParse(packetsplit[2], out slot))
+                ItemInstance inv = Session.Character.Inventory.LoadBySlotAndType(wearPacket.InventorySlot, InventoryType.Equipment);
+                if (inv?.Item != null)
                 {
-                    ItemInstance inv = Session.Character.Inventory.LoadBySlotAndType(slot, type);
-                    if (inv?.Item != null)
-                    {
-                        inv.Item.Use(Session, ref inv);
-                        Session.SendPacket(Session.Character.GenerateEff(123));
-                    }
+                    inv.Item.Use(Session, ref inv, wearPacket.Type);
+                    Session.SendPacket(Session.Character.GenerateEff(123));
                 }
             }
         }
 
+        /// <summary>
+        /// withdraw packet
+        /// </summary>
+        /// <param name="withdrawPacket"></param>
+        public void Withdraw(WithdrawPacket withdrawPacket)
+        {
+            ItemInstance previousInventory = Session.Character.Inventory.LoadBySlotAndType(withdrawPacket.Slot, withdrawPacket.PetBackpack ? InventoryType.PetWarehouse : InventoryType.Warehouse);
+            if (withdrawPacket.Amount <= 0 || previousInventory == null || withdrawPacket.Amount > previousInventory.Amount)
+            {
+                return;
+            }
+            ItemInstance item2 = previousInventory.DeepCopy();
+            item2.Id = Guid.NewGuid();
+            item2.Amount = withdrawPacket.Amount;
+            Session.Character.Inventory.RemoveItemAmountFromInventory(withdrawPacket.Amount, previousInventory.Id);
+            Session.Character.Inventory.AddToInventory(item2, item2.Item.Type);
+            previousInventory = Session.Character.Inventory.LoadBySlotAndType(withdrawPacket.Slot, withdrawPacket.PetBackpack ? InventoryType.PetWarehouse : InventoryType.Warehouse);
+            Session.SendPacket(withdrawPacket.PetBackpack ? UserInterfaceHelper.Instance.GeneratePStashRemove(withdrawPacket.Slot) : UserInterfaceHelper.Instance.GenerateStashRemove(withdrawPacket.Slot));
+        }
+
+        /// <summary>
+        /// changesp private method
+        /// </summary>
         private void ChangeSP()
         {
             SpecialistInstance sp = Session.Character.Inventory.LoadBySlotAndType<SpecialistInstance>((byte)EquipmentType.Sp, InventoryType.Wear);
@@ -1559,34 +1675,35 @@ namespace OpenNos.Handler
             {
                 if (Session.Character.GetReputIco() < sp.Item.ReputationMinimum)
                 {
-                    Session.SendPacket(Session.Character.GenerateMsg(Language.Instance.GetMessageFromKey("LOW_REP"), 0));
+                    Session.SendPacket(UserInterfaceHelper.Instance.GenerateMsg(Language.Instance.GetMessageFromKey("LOW_REP"), 0));
                     return;
                 }
                 if (fairy != null && sp.Item.Element != 0 && fairy.Item.Element != sp.Item.Element && fairy.Item.Element != sp.Item.SecondaryElement)
                 {
-                    Session.SendPacket(Session.Character.GenerateMsg(Language.Instance.GetMessageFromKey("BAD_FAIRY"), 0));
+                    Session.SendPacket(UserInterfaceHelper.Instance.GenerateMsg(Language.Instance.GetMessageFromKey("BAD_FAIRY"), 0));
                     return;
                 }
+                Session.Character.Buff.Clear();
                 Session.Character.LastTransform = DateTime.Now;
                 Session.Character.UseSp = true;
                 Session.Character.Morph = sp.Item.Morph;
                 Session.Character.MorphUpgrade = sp.Upgrade;
                 Session.Character.MorphUpgrade2 = sp.Design;
-                Session.CurrentMap?.Broadcast(Session.Character.GenerateCMode());
+                Session.CurrentMapInstance?.Broadcast(Session.Character.GenerateCMode());
                 Session.SendPacket(Session.Character.GenerateLev());
-                Session.CurrentMap?.Broadcast(Session.Character.GenerateEff(196), Session.Character.MapX, Session.Character.MapY);
-                Session.CurrentMap?.Broadcast(Session.Character.GenerateGuri(6, 1), Session.Character.MapX, Session.Character.MapY);
+                Session.CurrentMapInstance?.Broadcast(Session.Character.GenerateEff(196), Session.Character.PositionX, Session.Character.PositionY);
+                Session.CurrentMapInstance?.Broadcast(UserInterfaceHelper.Instance.GenerateGuri(6, 1, Session.Character.CharacterId), Session.Character.PositionX, Session.Character.PositionY);
                 Session.SendPacket(Session.Character.GenerateSpPoint());
                 Session.Character.LoadSpeed();
                 Session.SendPacket(Session.Character.GenerateCond());
                 Session.SendPacket(Session.Character.GenerateStat());
                 Session.SendPacket(Session.Character.GenerateStatChar());
                 Session.Character.SkillsSp = new ThreadSafeSortedList<int, CharacterSkill>();
-                foreach (Skill ski in ServerManager.GetAllSkill())
+                foreach (Skill ski in ServerManager.Instance.GetAllSkill())
                 {
                     if (ski.Class == Session.Character.Morph + 31 && sp.SpLevel >= ski.LevelMinimum)
                     {
-                        Session.Character.SkillsSp[ski.SkillVNum] = new CharacterSkill() { SkillVNum = ski.SkillVNum, CharacterId = Session.Character.CharacterId };
+                        Session.Character.SkillsSp[ski.SkillVNum] = new CharacterSkill { SkillVNum = ski.SkillVNum, CharacterId = Session.Character.CharacterId };
                     }
                 }
                 Session.SendPacket(Session.Character.GenerateSki());
@@ -1594,6 +1711,11 @@ namespace OpenNos.Handler
             }
         }
 
+        /// <summary>
+        /// exchange closure method
+        /// </summary>
+        /// <param name="session"></param>
+        /// <param name="targetSession"></param>
         private void CloseExchange(ClientSession session, ClientSession targetSession)
         {
             if (targetSession?.Character.ExchangeInfo != null)
@@ -1609,6 +1731,11 @@ namespace OpenNos.Handler
             }
         }
 
+        /// <summary>
+        /// exchange initialization method
+        /// </summary>
+        /// <param name="sourceSession"></param>
+        /// <param name="targetSession"></param>
         private void Exchange(ClientSession sourceSession, ClientSession targetSession)
         {
             if (sourceSession?.Character.ExchangeInfo == null)
@@ -1619,9 +1746,8 @@ namespace OpenNos.Handler
             // remove all items from source session
             foreach (ItemInstance item in sourceSession.Character.ExchangeInfo.ExchangeList)
             {
-                
                 ItemInstance invtemp = sourceSession.Character.Inventory.GetItemInstanceById(item.Id);
-                if (invtemp != null && item != null)
+                if (invtemp != null && invtemp.Amount >= item.Amount)
                 {
                     sourceSession.Character.Inventory.RemoveItemAmountFromInventory(item.Amount, invtemp.Id);
                 }
@@ -1636,12 +1762,10 @@ namespace OpenNos.Handler
             {
                 ItemInstance item2 = item.DeepCopy();
                 item2.Id = Guid.NewGuid();
-                ItemInstance inv = targetSession.Character.Inventory.AddToInventory(item2);
-                if (inv == null || inv.Slot == -1)
+                List<ItemInstance> inv = targetSession.Character.Inventory.AddToInventory(item2);
+                if (!inv.Any())
                 {
-                    continue;
                 }
-                targetSession.SendPacket(targetSession.Character.GenerateInventoryAdd(inv.ItemVNum, inv.Amount, inv.Type, inv.Slot, inv.Rare, inv.Design, inv.Upgrade, 0));
             }
 
             // handle gold
@@ -1654,6 +1778,10 @@ namespace OpenNos.Handler
             sourceSession.Character.ExchangeInfo = null;
         }
 
+        /// <summary>
+        /// sp removal method
+        /// </summary>
+        /// <param name="vnum"></param>
         private void RemoveSP(short vnum)
         {
             if (Session != null && Session.HasSession)
@@ -1662,7 +1790,8 @@ namespace OpenNos.Handler
                 {
                     return;
                 }
-                Logger.Debug(vnum.ToString(), Session.SessionId);
+                Session.Character.Buff.Clear();
+                Logger.Debug(Session.Character.GenerateIdentity(), vnum.ToString());
                 Session.Character.UseSp = false;
                 Session.Character.LoadSpeed();
                 Session.SendPacket(Session.Character.GenerateCond());
@@ -1680,8 +1809,8 @@ namespace OpenNos.Handler
                 }
                 Session.SendPacket(Session.Character.GenerateSay(string.Format(Language.Instance.GetMessageFromKey("STAY_TIME"), Session.Character.SpCooldown), 11));
                 Session.SendPacket($"sd {Session.Character.SpCooldown}");
-                Session.CurrentMap?.Broadcast(Session.Character.GenerateCMode());
-                Session.CurrentMap?.Broadcast(Session.Character.GenerateGuri(6, 1), Session.Character.MapX, Session.Character.MapY);
+                Session.CurrentMapInstance?.Broadcast(Session.Character.GenerateCMode());
+                Session.CurrentMapInstance?.Broadcast(UserInterfaceHelper.Instance.GenerateGuri(6, 1, Session.Character.CharacterId), Session.Character.PositionX, Session.Character.PositionY);
 
                 // ms_c
                 Session.SendPacket(Session.Character.GenerateSki());

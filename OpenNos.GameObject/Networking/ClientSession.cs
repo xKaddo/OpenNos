@@ -13,12 +13,15 @@
  */
 
 using OpenNos.Core;
+using OpenNos.Core.Handling;
 using OpenNos.Core.Networking.Communication.Scs.Communication.Messages;
 using OpenNos.Domain;
+using OpenNos.GameObject.Buff;
 using OpenNos.WebApi.Reference;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Reflection;
@@ -32,7 +35,6 @@ namespace OpenNos.GameObject
         public bool HealthStop = false;
 
         private static EncryptionBase _encryptor;
-        private Account _account;
         private Character _character;
         private INetworkClient _client;
         private IDictionary<string, HandlerMethodReference> _handlerMethods;
@@ -60,7 +62,7 @@ namespace OpenNos.GameObject
             _random = new Random((int)client.ClientId);
 
             // initialize lagging mode
-            bool isLagMode = System.Configuration.ConfigurationManager.AppSettings["LagMode"].ToLower() == "true";
+            bool isLagMode = ConfigurationManager.AppSettings["LagMode"].ToLower() == "true";
 
             // initialize network client
             _client = client;
@@ -81,18 +83,7 @@ namespace OpenNos.GameObject
 
         #region Properties
 
-        public Account Account
-        {
-            get
-            {
-                return _account;
-            }
-
-            set
-            {
-                _account = value;
-            }
-        }
+        public Account Account { get; private set; }
 
         public Character Character
         {
@@ -113,15 +104,9 @@ namespace OpenNos.GameObject
             }
         }
 
-        public long ClientId
-        {
-            get
-            {
-                return _client.ClientId;
-            }
-        }
+        public long ClientId => _client.ClientId;
 
-        public Map CurrentMap { get; set; }
+        public MapInstance CurrentMapInstance { get; set; }
 
         public IDictionary<string, HandlerMethodReference> HandlerMethods
         {
@@ -129,47 +114,24 @@ namespace OpenNos.GameObject
             {
                 return _handlerMethods ?? (_handlerMethods = new Dictionary<string, HandlerMethodReference>());
             }
+
             set
             {
                 _handlerMethods = value;
             }
         }
 
-        public bool HasCurrentMap
-        {
-            get
-            {
-                return CurrentMap != null;
-            }
-        }
+        public bool HasCurrentMapInstance => CurrentMapInstance != null;
 
         public bool HasSelectedCharacter { get; set; }
 
-        public bool HasSession
-        {
-            get
-            {
-                return _client != null;
-            }
-        }
+        public bool HasSession => _client != null;
 
-        public string IpAddress
-        {
-            get
-            {
-                return _client.IpAddress;
-            }
-        }
+        public string IpAddress => _client.IpAddress;
 
         public bool IsAuthenticated { get; set; }
 
-        public bool IsConnected
-        {
-            get
-            {
-                return _client.IsConnected;
-            }
-        }
+        public bool IsConnected => _client.IsConnected;
 
         public bool IsDisposing
         {
@@ -184,23 +146,13 @@ namespace OpenNos.GameObject
             }
         }
 
-        public bool IsLocalhost
-        {
-            get
-            {
-                return IpAddress.Contains("127.0.0.1");
-            }
-        }
+        public bool IsLocalhost => IpAddress.Contains("127.0.0.1");
 
-        public bool IsOnMap
-        {
-            get
-            {
-                return CurrentMap != null;
-            }
-        }
+        public bool IsOnMap => CurrentMapInstance != null;
 
         public int LastKeepAliveIdentity { get; set; }
+
+        public DateTime RegisterTime { get; internal set; }
 
         public int SessionId { get; set; }
 
@@ -223,16 +175,21 @@ namespace OpenNos.GameObject
             if (HasSelectedCharacter)
             {
                 Character.Dispose();
+                if (Character.MapInstance.MapInstanceType == MapInstanceType.TimeSpaceInstance || Character.MapInstance.MapInstanceType == MapInstanceType.RaidInstance)
+                {
+                    Character.MapInstance.InstanceBag.DeadList.Add(Character.CharacterId);
+                }
+                ServerManager.Instance.RemoveMapInstance(Character.Miniland.MapInstanceId);
 
                 // TODO Check why ExchangeInfo.TargetCharacterId is null Character.CloseTrade();
                 // disconnect client
-                ServerCommunicationClient.Instance.HubProxy.Invoke("DisconnectCharacter", Character.Name, Character.CharacterId).Wait();
+                ServerCommunicationClient.Instance.HubProxy.Invoke("DisconnectCharacter", ServerManager.Instance.ServerGroup, Character.Name, Character.CharacterId).Wait();
 
                 // unregister from map if registered
-                if (CurrentMap != null)
+                if (CurrentMapInstance != null)
                 {
-                    CurrentMap.UnregisterSession(Character.CharacterId);
-                    CurrentMap = null;
+                    CurrentMapInstance.UnregisterSession(Character.CharacterId);
+                    CurrentMapInstance = null;
                     ServerManager.Instance.UnregisterSession(Character.CharacterId);
                 }
             }
@@ -248,6 +205,11 @@ namespace OpenNos.GameObject
         public void Disconnect()
         {
             _client.Disconnect();
+        }
+
+        public string GenerateIdentity()
+        {
+            return $"Account: {Account.Name}";
         }
 
         public void Initialize(EncryptionBase encryptor, Type packetHandler, bool isWorldServer)
@@ -284,6 +246,11 @@ namespace OpenNos.GameObject
             }
         }
 
+        public void SendPacket(object score)
+        {
+            throw new NotImplementedException();
+        }
+
         public void SendPacketAfterWait(string packet, int Millisecond)
         {
             if (!IsDisposing)
@@ -313,6 +280,14 @@ namespace OpenNos.GameObject
             }
         }
 
+        public void SendPackets(IEnumerable<PacketDefinition> packets, byte priority = 10)
+        {
+            if (!IsDisposing)
+            {
+                packets.ToList().ForEach(s => _client.SendPacket(PacketFactory.Serialize(s), priority));
+            }
+        }
+
         public void SetCharacter(Character character)
         {
             Character = character;
@@ -326,6 +301,7 @@ namespace OpenNos.GameObject
             // register for servermanager
             ServerManager.Instance.RegisterSession(this);
             Character.SetSession(this);
+            Character.Buff = new BuffContainer(this);
         }
 
         private void ClearReceiveQueue()
@@ -336,40 +312,14 @@ namespace OpenNos.GameObject
             }
         }
 
-        private void OnOtherCharacterConnected(object sender, EventArgs e)
-        {
-            Tuple<string, long> loggedInCharacter = (Tuple<string, long>)sender;
-
-            if (Character.IsFriendOfCharacter(loggedInCharacter.Item2))
-            {
-                if (Character != null && Character.Name != loggedInCharacter.Item1)
-                {
-                    _client.SendPacket(Character.GenerateSay(string.Format(Language.Instance.GetMessageFromKey("CHARACTER_LOGGED_IN"), loggedInCharacter.Item1), 10));
-                    _client.SendPacket(Character.GenerateFinfo(null, loggedInCharacter.Item2));
-                }
-            }
-        }
-
-        private void OnOtherCharacterDisconnected(object sender, EventArgs e)
-        {
-            KeyValuePair<string, long> kvPair = (KeyValuePair<string, long>)sender;
-            if (Character.IsFriendOfCharacter(kvPair.Value))
-
-                if (Character != null && Character.Name != kvPair.Key)
-                {
-                    _client.SendPacket(Character.GenerateSay(string.Format(Language.Instance.GetMessageFromKey("CHARACTER_LOGGED_OUT"), kvPair.Key), 10));
-                    _client.SendPacket(Character.GenerateFinfo(kvPair.Value));
-                }
-        }
-
         private void GenerateHandlerReferences(Type type, bool isWorldServer)
         {
             IEnumerable<Type> handlerTypes = !isWorldServer ? type.Assembly.GetTypes().Where(t => t.Name.Equals("LoginPacketHandler")) // shitty but it works
                                                             : type.Assembly.GetTypes().Where(p =>
-                {
-                    Type interfaceType = type.GetInterfaces().FirstOrDefault();
-                    return interfaceType != null && !p.IsInterface && interfaceType.IsAssignableFrom(p);
-                });
+                                                            {
+                                                                Type interfaceType = type.GetInterfaces().FirstOrDefault();
+                                                                return interfaceType != null && !p.IsInterface && interfaceType.IsAssignableFrom(p);
+                                                            });
 
             // iterate thru each type in the given assembly
             foreach (Type handlerType in handlerTypes)
@@ -379,10 +329,10 @@ namespace OpenNos.GameObject
                 // include PacketDefinition
                 foreach (MethodInfo methodInfo in handlerType.GetMethods().Where(x => x.GetCustomAttributes(false).OfType<PacketAttribute>().Any() || x.GetParameters().FirstOrDefault()?.ParameterType.BaseType == typeof(PacketDefinition)))
                 {
-                    PacketAttribute packetAttribute = methodInfo.GetCustomAttributes(false).OfType<PacketAttribute>().FirstOrDefault();
+                    List<PacketAttribute> packetAttributes = methodInfo.GetCustomAttributes(false).OfType<PacketAttribute>().ToList();
 
                     // assume PacketDefinition based handler method
-                    if (packetAttribute == null)
+                    if (!packetAttributes.Any())
                     {
                         HandlerMethodReference methodReference = new HandlerMethodReference(DelegateBuilder.BuildDelegate<Action<object, object>>(methodInfo), handler, methodInfo.GetParameters().FirstOrDefault()?.ParameterType);
                         HandlerMethods.Add(methodReference.Identification, methodReference);
@@ -390,8 +340,11 @@ namespace OpenNos.GameObject
                     else
                     {
                         // assume string based handler method
-                        HandlerMethodReference methodReference = new HandlerMethodReference(DelegateBuilder.BuildDelegate<Action<object, object>>(methodInfo), handler, packetAttribute);
-                        HandlerMethods.Add(methodReference.Identification, methodReference);
+                        foreach (PacketAttribute packetAttribute in packetAttributes)
+                        {
+                            HandlerMethodReference methodReference = new HandlerMethodReference(DelegateBuilder.BuildDelegate<Action<object, object>>(methodInfo), handler, packetAttribute);
+                            HandlerMethods.Add(methodReference.Identification, methodReference);
+                        }
                     }
                 }
             }
@@ -415,21 +368,29 @@ namespace OpenNos.GameObject
                     {
                         return;
                     }
-                    LastKeepAliveIdentity = Convert.ToInt32(sessionParts[0]);
+                    int lastka;
+                    if (!int.TryParse(sessionParts[0], out lastka))
+                    {
+                        Disconnect();
+                    }
+                    LastKeepAliveIdentity = lastka;
 
                     // set the SessionId if Session Packet arrives
                     if (sessionParts.Length < 2)
                     {
                         return;
                     }
-                    SessionId = Convert.ToInt32(sessionParts[1].Split('\\').FirstOrDefault());
-                    Logger.Log.DebugFormat(Language.Instance.GetMessageFromKey("CLIENT_ARRIVED"), SessionId);
-
-                    if (!_waitForPacketsAmount.HasValue)
+                    int sessid;
+                    if (int.TryParse(sessionParts[1].Split('\\').FirstOrDefault(), out sessid))
                     {
-                        TriggerHandler("OpenNos.EntryPoint", string.Empty, false);
-                    }
+                        SessionId = sessid;
+                        Logger.Log.DebugFormat(Language.Instance.GetMessageFromKey("CLIENT_ARRIVED"), SessionId);
 
+                        if (!_waitForPacketsAmount.HasValue)
+                        {
+                            TriggerHandler("OpenNos.EntryPoint", string.Empty, false);
+                        }
+                    }
                     return;
                 }
 
@@ -437,16 +398,19 @@ namespace OpenNos.GameObject
 
                 foreach (string packet in packetConcatenated.Split(new[] { (char)0xFF }, StringSplitOptions.RemoveEmptyEntries))
                 {
-                    string[] packetsplit = packet.Split(' ', '^');
+                    string packetstring = packet.Replace('^', ' ');
+                    string[] packetsplit = packetstring.Split(' ');
 
                     if (_encryptor.HasCustomParameter)
                     {
                         // keep alive
                         string nextKeepAliveRaw = packetsplit[0];
                         int nextKeepaliveIdentity;
-                        if (!int.TryParse(nextKeepAliveRaw, out nextKeepaliveIdentity) && nextKeepaliveIdentity != LastKeepAliveIdentity + 1)
+                        if (!int.TryParse(nextKeepAliveRaw, out nextKeepaliveIdentity) &&
+                            nextKeepaliveIdentity != LastKeepAliveIdentity + 1)
                         {
-                            Logger.Log.ErrorFormat(Language.Instance.GetMessageFromKey("CORRUPTED_KEEPALIVE"), _client.ClientId);
+                            Logger.Log.ErrorFormat(Language.Instance.GetMessageFromKey("CORRUPTED_KEEPALIVE"),
+                                _client.ClientId);
                             _client.Disconnect();
                             return;
                         }
@@ -466,11 +430,11 @@ namespace OpenNos.GameObject
                         {
                             if (_waitForPacketList.Count != _waitForPacketsAmount - 1)
                             {
-                                _waitForPacketList.Add(packet);
+                                _waitForPacketList.Add(packetstring);
                             }
                             else
                             {
-                                _waitForPacketList.Add(packet);
+                                _waitForPacketList.Add(packetstring);
                                 _waitForPacketsAmount = null;
                                 string queuedPackets = string.Join(" ", _waitForPacketList.ToArray());
                                 string header = queuedPackets.Split(' ', '^')[1];
@@ -481,56 +445,39 @@ namespace OpenNos.GameObject
                         }
                         else
                         {
-                            string[] packetHeader = packet.Split(new[] { ' ', '^' }, StringSplitOptions.RemoveEmptyEntries);
-
-                            // 1 is a keep alive packet with no content to handle
-                            int permit = 1;
-                            if (packetHeader.Length > 1)
+                            if (packetsplit.Length > 1)
                             {
-                                if (packetHeader[1][0] == '$')
+                                if (packetsplit[1].Length >= 1 && (packetsplit[1][0] == '/' || packetsplit[1][0] == ':' || packetsplit[1][0] == ';'))
                                 {
-                                    if (Account != null && Account.Authority != AuthorityType.Admin)
-                                    {
-                                        permit = 0;
-                                    }
+                                    packetsplit[1] = packetsplit[1][0].ToString();
+                                    packetstring = packet.Insert(packet.IndexOf(' ') + 2, " ");
                                 }
-
-                                if (packetHeader[1][0] == '/' || packetHeader[1][0] == ':' || packetHeader[1][0] == ';')
+                                if (packetsplit[1] != "0")
                                 {
-                                    TriggerHandler(packetHeader[1][0].ToString(), packet, false);
-                                }
-                                else
-                                {
-                                    if (permit == 1)
-                                    {
-                                        if (packetHeader[1] != "0")
-                                        {
-                                            TriggerHandler(packetHeader[1], packet, false);
-                                        }
-                                    }
+                                    TriggerHandler(packetsplit[1].Replace("#", ""), packetstring, false);
                                 }
                             }
                         }
                     }
                     else
                     {
+                        string packetHeader = packetstring.Split(' ')[0];
+
                         // simple messaging
-                        string packetHeader = packet.Split(' ')[0];
                         if (packetHeader[0] == '/' || packetHeader[0] == ':' || packetHeader[0] == ';')
                         {
-                            TriggerHandler(packetHeader[0].ToString(), packet, false);
+                            packetHeader = packetHeader[0].ToString();
+                            packetstring = packet.Insert(packet.IndexOf(' ') + 2, " ");
                         }
-                        else
-                        {
-                            TriggerHandler(packetHeader, packet, false);
-                        }
+
+                        TriggerHandler(packetHeader.Replace("#", ""), packetstring, false);
                     }
                 }
             }
         }
 
         /// <summary>
-        /// This will be triggered when the underlying NetworkCleint receives a packet.
+        /// This will be triggered when the underlying NetworkClient receives a packet.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
@@ -550,12 +497,49 @@ namespace OpenNos.GameObject
             lastPacketReceive = e.ReceivedTimestamp.Ticks;
         }
 
+        private void OnOtherCharacterConnected(object sender, EventArgs e)
+        {
+            Tuple<string, string, long> loggedInCharacter = (Tuple<string, string, long>)sender;
+            if (ServerManager.Instance.ServerGroup != loggedInCharacter.Item1)
+            {
+                return;
+            }
+            if (Character.IsFriendOfCharacter(loggedInCharacter.Item3))
+            {
+                if (Character != null && Character.Name != loggedInCharacter.Item2)
+                {
+                    _client.SendPacket(Character.GenerateSay(string.Format(Language.Instance.GetMessageFromKey("CHARACTER_LOGGED_IN"), loggedInCharacter.Item2), 10));
+                    _client.SendPacket(Character.GenerateFinfo(loggedInCharacter.Item3, true));
+                }
+            }
+            FamilyCharacter chara = Character.Family?.FamilyCharacters.FirstOrDefault(s => s.CharacterId == loggedInCharacter.Item3);
+            if (chara != null && loggedInCharacter.Item3 != Character?.CharacterId)
+            {
+                _client.SendPacket(Character.GenerateSay(string.Format(Language.Instance.GetMessageFromKey("CHARACTER_FAMILY_LOGGED_IN"), loggedInCharacter.Item2, Language.Instance.GetMessageFromKey(chara.Authority.ToString().ToUpper())), 10));
+            }
+        }
+
+        private void OnOtherCharacterDisconnected(object sender, EventArgs e)
+        {
+            Tuple<string, string, long> loggedOutCharacter = (Tuple<string, string, long>)sender;
+            if (ServerManager.Instance.ServerGroup != loggedOutCharacter.Item1)
+            {
+                return;
+            }
+            if (Character.IsFriendOfCharacter(loggedOutCharacter.Item3))
+
+                if (Character != null && Character.Name != loggedOutCharacter.Item2)
+                {
+                    _client.SendPacket(Character.GenerateSay(string.Format(Language.Instance.GetMessageFromKey("CHARACTER_LOGGED_OUT"), loggedOutCharacter.Item2), 10));
+                    _client.SendPacket(Character.GenerateFinfo(loggedOutCharacter.Item3, false));
+                }
+        }
+
         private void TriggerHandler(string packetHeader, string packet, bool force)
         {
             if (!IsDisposing)
             {
                 HandlerMethodReference methodReference = HandlerMethods.ContainsKey(packetHeader) ? HandlerMethods[packetHeader] : null;
-
                 if (methodReference != null)
                 {
                     if (methodReference.HandlerMethodAttribute != null && !force && methodReference.HandlerMethodAttribute.Amount > 1 && !_waitForPacketsAmount.HasValue)
@@ -572,15 +556,19 @@ namespace OpenNos.GameObject
                             // call actual handler method
                             if (methodReference.PacketDefinitionParameterType != null)
                             {
-                                object serializedPacket = PacketFactory.Deserialize(packet, methodReference.PacketDefinitionParameterType, true);
+                                //check for the correct authority
+                                if (!IsAuthenticated || (byte)methodReference.Authority <= (byte)Account.Authority)
+                                {
+                                    object deserializedPacket = PacketFactory.Deserialize(packet, methodReference.PacketDefinitionParameterType, IsAuthenticated);
 
-                                if (serializedPacket != null || methodReference.PassNonParseablePacket)
-                                {
-                                    methodReference.HandlerMethod(methodReference.ParentHandler, serializedPacket);
-                                }
-                                else
-                                {
-                                    Logger.Log.WarnFormat(Language.Instance.GetMessageFromKey("CORRUPT_PACKET"), packetHeader, packet);
+                                    if (deserializedPacket != null || methodReference.PassNonParseablePacket)
+                                    {
+                                        methodReference.HandlerMethod(methodReference.ParentHandler, deserializedPacket);
+                                    }
+                                    else
+                                    {
+                                        Logger.Log.WarnFormat(Language.Instance.GetMessageFromKey("CORRUPT_PACKET"), packetHeader, packet);
+                                    }
                                 }
                             }
                             else
@@ -591,7 +579,6 @@ namespace OpenNos.GameObject
                     }
                     catch (DivideByZeroException ex)
                     {
-                        throw ex;
                         // disconnect if something unexpected happens
                         Logger.Log.Error("Handler Error SessionId: " + SessionId, ex);
                         Disconnect();

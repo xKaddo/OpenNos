@@ -14,6 +14,8 @@
 
 using OpenNos.DAL.Interface;
 using OpenNos.Data;
+using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace OpenNos.DAL.Mock
@@ -21,6 +23,11 @@ namespace OpenNos.DAL.Mock
     public class SkillDAO : BaseDAO<SkillDTO>, ISkillDAO
     {
         #region Methods
+
+        public void Insert(List<SkillDTO> skills)
+        {
+            throw new NotImplementedException();
+        }
 
         public SkillDTO LoadById(short skillId)
         {

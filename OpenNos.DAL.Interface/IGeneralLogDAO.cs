@@ -13,7 +13,6 @@
  */
 
 using OpenNos.Data;
-using System;
 using System.Collections.Generic;
 
 namespace OpenNos.DAL.Interface
@@ -26,13 +25,15 @@ namespace OpenNos.DAL.Interface
 
         GeneralLogDTO Insert(GeneralLogDTO generallog);
 
-        IEnumerable<GeneralLogDTO> LoadByAccount(long accountId);
+        IEnumerable<GeneralLogDTO> LoadAll();
 
-        IEnumerable<GeneralLogDTO> LoadByLogType(string LogType, Nullable<long> CharacterId);
+        IEnumerable<GeneralLogDTO> LoadByAccount(long? accountId);
 
-        void SetCharIdNull(Nullable<long> CharacterId);
+        IEnumerable<GeneralLogDTO> LoadByLogType(string LogType, long? CharacterId);
 
-        void WriteGeneralLog(long accountId, string ipAddress, Nullable<long> characterId, string logType, string logData);
+        void SetCharIdNull(long? CharacterId);
+
+        void WriteGeneralLog(long accountId, string ipAddress, long? characterId, string logType, string logData);
 
         #endregion
     }

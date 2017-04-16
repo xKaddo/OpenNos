@@ -12,45 +12,28 @@
  * GNU General Public License for more details.
  */
 
-namespace OpenNos.Core
+using System;
+
+namespace OpenNos.Core.Handling
 {
-    [System.AttributeUsage(System.AttributeTargets.Method)]
-    public class PacketAttribute : System.Attribute
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
+    public class PacketAttribute : Attribute
     {
-        #region Members
-
-        private int _amount;
-        private string _header;
-
-        #endregion
-
         #region Instantiation
 
         public PacketAttribute(string header, int amount = 1)
         {
-            this._header = header;
-            this._amount = amount;
+            Header = header;
+            Amount = amount;
         }
 
         #endregion
 
         #region Properties
 
-        public int Amount
-        {
-            get
-            {
-                return _amount;
-            }
-        }
+        public int Amount { get; }
 
-        public string Header
-        {
-            get
-            {
-                return _header;
-            }
-        }
+        public string Header { get; }
 
         #endregion
     }

@@ -19,6 +19,7 @@ using OpenNos.DAL.Interface;
 using OpenNos.Data;
 using OpenNos.Data.Enums;
 using System;
+using System.Data.Entity;
 using System.Linq;
 
 namespace OpenNos.DAL.EF
@@ -33,11 +34,11 @@ namespace OpenNos.DAL.EF
             {
                 using (var context = DataAccessHelper.CreateContext())
                 {
-                    Account Account = context.Account.FirstOrDefault(c => c.AccountId.Equals(accountId));
+                    Account account = context.Account.FirstOrDefault(c => c.AccountId.Equals(accountId));
 
-                    if (Account != null)
+                    if (account != null)
                     {
-                        context.Account.Remove(Account);
+                        context.Account.Remove(account);
                         context.SaveChanges();
                     }
 
@@ -57,19 +58,16 @@ namespace OpenNos.DAL.EF
             {
                 using (var context = DataAccessHelper.CreateContext())
                 {
-                    long AccountId = account.AccountId;
-                    Account entity = context.Account.FirstOrDefault(c => c.AccountId.Equals(AccountId));
+                    long accountId = account.AccountId;
+                    Account entity = context.Account.FirstOrDefault(c => c.AccountId.Equals(accountId));
 
                     if (entity == null)
                     {
                         account = Insert(account, context);
                         return SaveResult.Inserted;
                     }
-                    else
-                    {
-                        account = Update(entity, account, context);
-                        return SaveResult.Updated;
-                    }
+                    account = Update(entity, account, context);
+                    return SaveResult.Updated;
                 }
             }
             catch (Exception e)
@@ -105,10 +103,10 @@ namespace OpenNos.DAL.EF
             {
                 using (var context = DataAccessHelper.CreateContext())
                 {
-                    Account Account = context.Account.FirstOrDefault(a => a.Name.Equals(name));
-                    if (Account != null)
+                    Account account = context.Account.FirstOrDefault(a => a.Name.Equals(name));
+                    if (account != null)
                     {
-                        return _mapper.Map<AccountDTO>(Account);
+                        return _mapper.Map<AccountDTO>(account);
                     }
                 }
             }
@@ -119,73 +117,20 @@ namespace OpenNos.DAL.EF
             return null;
         }
 
-        public AccountDTO LoadBySessionId(int sessionId)
+        public void WriteGeneralLog(long accountId, string ipAddress, long? characterId, string logType, string logData)
         {
             try
             {
                 using (var context = DataAccessHelper.CreateContext())
                 {
-                    Account Account = context.Account.FirstOrDefault(a => a.LastSession.Equals(sessionId));
-                    if (Account != null)
-                    {
-                        return _mapper.Map<AccountDTO>(Account);
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                Logger.Error(e);
-            }
-            return null;
-        }
-
-        public void LogIn(string name)
-        {
-            try
-            {
-                using (var context = DataAccessHelper.CreateContext())
-                {
-                    Account Account = context.Account.FirstOrDefault(a => a.Name.Equals(name));
-                    context.SaveChanges();
-                }
-            }
-            catch (Exception e)
-            {
-                Logger.Error(e);
-            }
-        }
-
-        public void UpdateLastSessionAndIp(string name, int session, string ip)
-        {
-            try
-            {
-                using (var context = DataAccessHelper.CreateContext())
-                {
-                    Account Account = context.Account.FirstOrDefault(a => a.Name.Equals(name));
-                    Account.LastSession = session;
-                    context.SaveChanges();
-                }
-            }
-            catch (Exception e)
-            {
-                Logger.Error(e);
-            }
-        }
-
-        public void WriteGeneralLog(long accountId, string ipAddress, long? CharacterId, string logType, string logData)
-        {
-            try
-            {
-                using (var context = DataAccessHelper.CreateContext())
-                {
-                    GeneralLog log = new GeneralLog()
+                    GeneralLog log = new GeneralLog
                     {
                         AccountId = accountId,
                         IpAddress = ipAddress,
                         Timestamp = DateTime.Now,
                         LogType = logType,
                         LogData = logData,
-                        CharacterId = CharacterId
+                        CharacterId = characterId
                     };
 
                     context.GeneralLog.Add(log);
@@ -200,13 +145,7 @@ namespace OpenNos.DAL.EF
 
         private AccountDTO Insert(AccountDTO account, OpenNosContext context)
         {
-            if (account.LastCompliment == DateTime.MinValue)
-            {
-                account.LastCompliment = DateTime.Now;
-            }
-
             Account entity = _mapper.Map<Account>(account);
-            entity.LastCompliment = DateTime.Now.AddDays(-1);
             context.Account.Add(entity);
             context.SaveChanges();
             return _mapper.Map<AccountDTO>(entity);
@@ -219,11 +158,9 @@ namespace OpenNos.DAL.EF
                 // The Mapper breaks context.SaveChanges(), so we need to "map" the data by hand...
                 // entity = _mapper.Map<Account>(account);
                 entity.Authority = account.Authority;
-                entity.LastCompliment = account.LastCompliment;
-                entity.LastSession = account.LastSession;
                 entity.Name = account.Name;
                 entity.Password = account.Password;
-                context.Entry(entity).State = System.Data.Entity.EntityState.Modified;
+                context.Entry(entity).State = EntityState.Modified;
                 context.SaveChanges();
             }
             return _mapper.Map<AccountDTO>(entity);

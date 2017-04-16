@@ -14,6 +14,7 @@
 
 using OpenNos.DAL.Interface;
 using OpenNos.Data;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -22,6 +23,11 @@ namespace OpenNos.DAL.Mock
     public class MapNpcDAO : BaseDAO<MapNpcDTO>, IMapNpcDAO
     {
         #region Methods
+
+        public void Insert(List<MapNpcDTO> npcs)
+        {
+            throw new NotImplementedException();
+        }
 
         public MapNpcDTO LoadById(int mapNpcId)
         {

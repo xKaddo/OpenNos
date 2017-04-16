@@ -15,26 +15,32 @@
 using OpenNos.Core;
 using OpenNos.DAL.EF.DB;
 using OpenNos.DAL.EF.Helpers;
+using OpenNos.DAL.Interface;
 using OpenNos.Data;
 using OpenNos.Data.Enums;
+using OpenNos.Domain;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
+
 namespace OpenNos.DAL.EF
 {
     public class FamilyCharacterDAO : MappingBaseDAO<FamilyCharacter, FamilyCharacterDTO>, IFamilyCharacterDAO
     {
+        #region Methods
+
         public DeleteResult Delete(string characterName)
         {
             try
             {
                 using (var context = DataAccessHelper.CreateContext())
                 {
-                    Character character = context.Character.FirstOrDefault(c => c.Name.Equals(characterName));
-
-                    if (character != null)
+                    Character character = context.Character.FirstOrDefault(c => c.Name.Equals(characterName) && c.State == (byte)CharacterState.Active);
+                    FamilyCharacter familyCharacter = context.FamilyCharacter.FirstOrDefault(c => c.CharacterId.Equals(character.CharacterId));
+                    if (character != null && familyCharacter != null)
                     {
-                        character.FamilyCharacterId = null;
+                        context.FamilyCharacter.Remove(familyCharacter);
                         context.SaveChanges();
                     }
 
@@ -62,17 +68,31 @@ namespace OpenNos.DAL.EF
                         character = Insert(character, context);
                         return SaveResult.Inserted;
                     }
-                    else
-                    {
-                        character = Update(entity, character, context);
-                        return SaveResult.Updated;
-                    }
+
+                    character = Update(entity, character, context);
+                    return SaveResult.Updated;
                 }
             }
             catch (Exception e)
             {
                 Logger.Log.Error(string.Format(Language.Instance.GetMessageFromKey("INSERT_ERROR"), character, e.Message), e);
                 return SaveResult.Error;
+            }
+        }
+
+        public FamilyCharacterDTO LoadByCharacterId(long characterId)
+        {
+            try
+            {
+                using (var context = DataAccessHelper.CreateContext())
+                {
+                    return _mapper.Map<FamilyCharacterDTO>(context.FamilyCharacter.FirstOrDefault(c => c.CharacterId == characterId));
+                }
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e);
+                return null;
             }
         }
 
@@ -118,5 +138,7 @@ namespace OpenNos.DAL.EF
 
             return _mapper.Map<FamilyCharacterDTO>(entity);
         }
+
+        #endregion
     }
 }

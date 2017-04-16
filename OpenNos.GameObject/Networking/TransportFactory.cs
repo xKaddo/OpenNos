@@ -1,38 +1,25 @@
-﻿using System;
-using System.Collections.Concurrent;
-
-namespace OpenNos.GameObject
+﻿namespace OpenNos.GameObject
 {
     public class TransportFactory
     {
         #region Members
 
         private static TransportFactory instance;
-        private long _lastTransportId = 1;
-        private Random _random;
-        private ConcurrentBag<long> _transportIds;
+        private long _lastTransportId = 100000;
 
         #endregion
 
         #region Instantiation
 
-        public TransportFactory()
+        private TransportFactory()
         {
-            _transportIds = new ConcurrentBag<long>();
-            _random = new Random();
         }
 
         #endregion
 
         #region Properties
 
-        public static TransportFactory Instance
-        {
-            get
-            {
-                return instance ?? (instance = new TransportFactory());
-            }
-        }
+        public static TransportFactory Instance => instance ?? (instance = new TransportFactory());
 
         #endregion
 
@@ -42,19 +29,12 @@ namespace OpenNos.GameObject
         {
             _lastTransportId++;
 
-            if (_lastTransportId > 999999)
+            if (_lastTransportId >= long.MaxValue)
             {
-                _lastTransportId = 1;
+                _lastTransportId = 0;
             }
 
-            _transportIds.Add(_lastTransportId);
-
             return _lastTransportId;
-        }
-
-        public bool RemoveTransportId(long id)
-        {
-            return _transportIds.TryTake(out id);
         }
 
         #endregion

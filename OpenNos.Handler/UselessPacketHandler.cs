@@ -48,32 +48,32 @@ namespace OpenNos.Handler
 
         #region Methods
 
-        [Packet("c_close")]
-        public void CClose(string packet)
+        public void CClose(CClosePacket packet)
         {
             // idk
         }
 
-        [Packet("f_stash_end")]
-        public void FStashEnd(string packet)
+        public void FStashEnd(FStashEndPacket packet)
         {
             // idk
         }
 
-        [Packet("lbs")]
-        public void Lbs(string packet)
+        public void FStashEnd(StashEndPacket packet)
         {
             // idk
         }
 
-        [Packet("shopclose")]
-        public void ShopClose(string packet)
+        public void Lbs(LbsPacket packet)
+        {
+            // idk
+        }
+
+        public void ShopClose(ShopClosePacket packet)
         {
             // Not needed for now.
         }
 
-        [Packet("snap")]
-        public void Snap(string packet)
+        public void Snap(SnapPacket packet)
         {
             // Not needed for now. (pictures)
         }

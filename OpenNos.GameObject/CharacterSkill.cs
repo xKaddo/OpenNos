@@ -59,7 +59,7 @@ namespace OpenNos.GameObject
             {
                 if (skill == null)
                 {
-                    skill = ServerManager.GetSkill(SkillVNum);
+                    skill = ServerManager.Instance.GetSkill(SkillVNum);
                 }
 
                 return skill;
@@ -72,7 +72,7 @@ namespace OpenNos.GameObject
 
         public bool CanBeUsed()
         {
-            return Skill != null && (LastUse.AddMilliseconds(Skill.Cooldown * 100) < DateTime.Now);
+            return Skill != null && LastUse.AddMilliseconds(Skill.Cooldown * 100) < DateTime.Now;
         }
 
         #endregion

@@ -15,26 +15,30 @@
 using OpenNos.Core;
 using OpenNos.DAL.EF.DB;
 using OpenNos.DAL.EF.Helpers;
+using OpenNos.DAL.Interface;
 using OpenNos.Data;
 using OpenNos.Data.Enums;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace OpenNos.DAL.EF
 {
     public class FamilyDAO : MappingBaseDAO<Family, FamilyDTO>, IFamilyDAO
     {
+        #region Methods
+
         public DeleteResult Delete(long familyId)
         {
             try
             {
                 using (var context = DataAccessHelper.CreateContext())
                 {
-                    Account Account = context.Account.FirstOrDefault(c => c.AccountId.Equals(familyId));
+                    Family Fam = context.Family.FirstOrDefault(c => c.FamilyId == familyId);
 
-                    if (Account != null)
+                    if (Fam != null)
                     {
-                        context.Account.Remove(Account);
+                        context.Family.Remove(Fam);
                         context.SaveChanges();
                     }
 
@@ -43,7 +47,7 @@ namespace OpenNos.DAL.EF
             }
             catch (Exception e)
             {
-                Logger.Log.Error(string.Format(Language.Instance.GetMessageFromKey("DELETE_ACCOUNT_ERROR"), familyId, e.Message), e);
+                Logger.Log.Error(string.Format(Language.Instance.GetMessageFromKey("DELETE_ERROR"), familyId, e.Message), e);
                 return DeleteResult.Error;
             }
         }
@@ -62,11 +66,9 @@ namespace OpenNos.DAL.EF
                         family = Insert(family, context);
                         return SaveResult.Inserted;
                     }
-                    else
-                    {
-                        family = Update(entity, family, context);
-                        return SaveResult.Updated;
-                    }
+
+                    family = Update(entity, family, context);
+                    return SaveResult.Updated;
                 }
             }
             catch (Exception e)
@@ -76,17 +78,31 @@ namespace OpenNos.DAL.EF
             }
         }
 
+        public IEnumerable<FamilyDTO> LoadAll()
+        {
+            using (var context = DataAccessHelper.CreateContext())
+            {
+                foreach (Family entity in context.Family)
+                {
+                    yield return _mapper.Map<FamilyDTO>(entity);
+                }
+            }
+        }
+
         public FamilyDTO LoadByCharacterId(long characterId)
         {
             try
             {
                 using (var context = DataAccessHelper.CreateContext())
                 {
-                    FamilyCharacter familyCharacter = context.FamilyCharacter.FirstOrDefault(fc => fc.Character.FirstOrDefault(c => c.CharacterId.Equals(characterId)) != null);
-                    Family family = context.Family.FirstOrDefault(a => a.FamilyId.Equals(familyCharacter.FamilyId));
-                    if (family != null)
+                    FamilyCharacter familyCharacter = context.FamilyCharacter.FirstOrDefault(fc => fc.Character.CharacterId.Equals(characterId));
+                    if (familyCharacter != null)
                     {
-                        return _mapper.Map<FamilyDTO>(family);
+                        Family family = context.Family.FirstOrDefault(a => a.FamilyId.Equals(familyCharacter.FamilyId));
+                        if (family != null)
+                        {
+                            return _mapper.Map<FamilyDTO>(family);
+                        }
                     }
                 }
             }
@@ -145,14 +161,16 @@ namespace OpenNos.DAL.EF
             return _mapper.Map<FamilyDTO>(entity);
         }
 
-        private FamilyDTO Update(Family entity, FamilyDTO account, OpenNosContext context)
+        private FamilyDTO Update(Family entity, FamilyDTO family, OpenNosContext context)
         {
             if (entity != null)
             {
-                entity = _mapper.Map<Family>(account);
+                _mapper.Map(family, entity);
                 context.SaveChanges();
             }
             return _mapper.Map<FamilyDTO>(entity);
         }
+
+        #endregion
     }
 }

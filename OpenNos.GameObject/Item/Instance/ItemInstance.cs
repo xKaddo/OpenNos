@@ -13,6 +13,7 @@
  */
 
 using OpenNos.Data;
+using OpenNos.Domain;
 using System;
 
 namespace OpenNos.GameObject
@@ -57,7 +58,7 @@ namespace OpenNos.GameObject
         {
             get
             {
-                return item ?? (item = ServerManager.GetItem(ItemVNum));
+                return item ?? (item = ServerManager.Instance.GetItem(ItemVNum));
             }
         }
 
@@ -70,6 +71,63 @@ namespace OpenNos.GameObject
         public ItemInstance DeepCopy()
         {
             return (ItemInstance)MemberwiseClone();
+        }
+
+        public string GenerateFStash()
+        {
+            return $"f_stash {GenerateStashPacket()}";
+        }
+
+        public string GenerateInventoryAdd()
+        {
+            switch (Type)
+            {
+                case InventoryType.Equipment:
+                    return $"ivn 0 {Slot}.{ItemVNum}.{Rare}.{(Item.IsColored ? Design : Upgrade)}.0";
+
+                case InventoryType.Main:
+                    return $"ivn 1 {Slot}.{ItemVNum}.{Amount}.0";
+
+                case InventoryType.Etc:
+                    return $"ivn 2 {Slot}.{ItemVNum}.{Amount}.0";
+
+                case InventoryType.Miniland:
+                    return $"ivn 3 {Slot}.{ItemVNum}.{Amount}";
+
+                case InventoryType.Specialist:
+                    return $"ivn 6 {Slot}.{ItemVNum}.{Rare}.{Upgrade}.{(this as SpecialistInstance).SpStoneUpgrade}";
+
+                case InventoryType.Costume:
+                    return $"ivn 7 {Slot}.{ItemVNum}.{Rare}.{Upgrade}.0";
+            }
+            return string.Empty;
+        }
+
+        public string GeneratePStash()
+        {
+            return $"pstash {GenerateStashPacket()}";
+        }
+
+        public string GenerateStash()
+        {
+            return $"stash {GenerateStashPacket()}";
+        }
+
+        public string GenerateStashPacket()
+        {
+            string packet = $"{Slot}.{ItemVNum}.{(byte)Item.Type}";
+            switch (Item.Type)
+            {
+                case InventoryType.Equipment:
+                    return packet + $".{Amount}.{Rare}.{Upgrade}";
+
+                case InventoryType.Specialist:
+                    SpecialistInstance sp = this as SpecialistInstance;
+                    return packet + $".{Upgrade}.{sp?.SpStoneUpgrade ?? 0}.0";
+
+                default:
+                    return packet + $".{Amount}.0.0";
+            }
         }
 
         public void Save()

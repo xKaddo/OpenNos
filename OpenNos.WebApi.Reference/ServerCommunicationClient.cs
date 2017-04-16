@@ -15,6 +15,7 @@
 using Microsoft.AspNet.SignalR.Client;
 using OpenNos.Domain;
 using System;
+using System.Collections.Generic;
 
 namespace OpenNos.WebApi.Reference
 {
@@ -22,6 +23,7 @@ namespace OpenNos.WebApi.Reference
     {
         #region Members
 
+        public bool IsConnected;
         private const string remoteUrl = "http://localhost:6666/";
 
         private static ServerCommunicationClient _instance;
@@ -37,13 +39,21 @@ namespace OpenNos.WebApi.Reference
 
         public event EventHandler AccountDisconnectedEvent;
 
+        public event EventHandler BazaarRefresh;
+
         public event EventHandler CharacterConnectedEvent;
 
         public event EventHandler CharacterDisconnectedEvent;
 
-        public event EventHandler SessionKickedEvent;
+        public event EventHandler FamilyRefresh;
 
         public event EventHandler MessageSentToCharacter;
+
+        public event EventHandler PenaltyLogRefresh;
+
+        public event EventHandler RelationRefresh;
+
+        public event EventHandler SessionKickedEvent;
 
         #endregion
 
@@ -65,6 +75,7 @@ namespace OpenNos.WebApi.Reference
                 {
                     InitializeAndRegisterCallbacks();
                 }
+                while (!IsConnected) { }
 
                 return _hubProxy;
             }
@@ -87,6 +98,35 @@ namespace OpenNos.WebApi.Reference
         public void InitializeAndRegisterCallbacks()
         {
             _hubconnection = new HubConnection(remoteUrl);
+            _hubconnection.Closed += () =>
+            {
+                IsConnected = false;
+                _hubconnection = new HubConnection(remoteUrl);
+                _hubProxy = _hubconnection.CreateHubProxy("servercommunicationhub");
+
+                _hubProxy.On<string, long>("accountConnected", OnAccountConnected);
+
+                _hubProxy.On<string>("accountDisconnected", OnAccountDisconnected);
+
+                _hubProxy.On<string, string, long>("characterConnected", OnCharacterConnected);
+
+                _hubProxy.On<string, string, long>("characterDisconnected", OnCharacterDisconnected);
+
+                _hubProxy.On<long?, string>("kickSession", OnSessionKicked);
+
+                _hubProxy.On<string, long>("refreshFamily", OnFamilyRefresh);
+
+                _hubProxy.On<string, long>("refreshRelation", OnRelationRefresh);
+
+                _hubProxy.On<int>("refreshPenaltyLog", OnPenaltyLogRefresh);
+
+                _hubProxy.On<string, long>("refreshBazaar", OnBazaarRefresh);
+
+                _hubProxy.On<string, string, string, string, int, MessageType>("sendMessageToCharacter", OnMessageSentToCharacter);
+
+                _hubconnection.Start().Wait();
+                IsConnected = true;
+            };
 
             _hubProxy = _hubconnection.CreateHubProxy("servercommunicationhub");
 
@@ -95,44 +135,24 @@ namespace OpenNos.WebApi.Reference
 
             _hubProxy.On<string>("accountDisconnected", OnAccountDisconnected);
 
-            _hubProxy.On<string, long>("characterConnected", OnCharacterConnected);
+            _hubProxy.On<string, string, long>("characterConnected", OnCharacterConnected);
 
-            _hubProxy.On<string, long>("characterDisconnected", OnCharacterDisconnected);
+            _hubProxy.On<string, string, long>("characterDisconnected", OnCharacterDisconnected);
 
             _hubProxy.On<long?, string>("kickSession", OnSessionKicked);
 
-            _hubProxy.On<string, string, int, MessageType>("sendMessageToCharacter", OnMessageSentToCharacter);
+            _hubProxy.On<string, long>("refreshFamily", OnFamilyRefresh);
+
+            _hubProxy.On<string, long>("refreshRelation", OnRelationRefresh);
+
+            _hubProxy.On<int>("refreshPenaltyLog", OnPenaltyLogRefresh);
+
+            _hubProxy.On<string, long>("refreshBazaar", OnBazaarRefresh);
+
+            _hubProxy.On<string, string, string, string, int, MessageType>("sendMessageToCharacter", OnMessageSentToCharacter);
 
             _hubconnection.Start().Wait();
-        }
-
-        public void OnMessageSentToCharacter(string characterName, string message, int fromChannel, MessageType messageType)
-        {
-            MessageSentToCharacter?.Invoke(new Tuple<string, string, int, MessageType>(characterName, message, fromChannel, messageType), new EventArgs());
-        }
-
-        public void OnAccountDisconnected(string accountName)
-        {
-            if (AccountDisconnectedEvent != null && !string.IsNullOrEmpty(accountName))
-            {
-                AccountDisconnectedEvent(accountName, new EventArgs());
-            }
-        }
-
-        public void OnCharacterDisconnected(string characterName, long characterId)
-        {
-            if (CharacterDisconnectedEvent != null && !string.IsNullOrEmpty(characterName))
-            {
-                CharacterDisconnectedEvent(new System.Collections.Generic.KeyValuePair<string, long>(characterName, characterId), new EventArgs());
-            }
-        }
-
-        public void OnSessionKicked(long? sessionId, string accountName)
-        {
-            if (SessionKickedEvent != null && (sessionId.HasValue || !String.IsNullOrEmpty(accountName)))
-            {
-                SessionKickedEvent(new Tuple<long?, string>(sessionId, accountName), new EventArgs());
-            }
+            IsConnected = true;
         }
 
         protected virtual void Dispose(bool disposing)
@@ -147,15 +167,64 @@ namespace OpenNos.WebApi.Reference
         {
             if (AccountConnectedEvent != null && !string.IsNullOrEmpty(accountName))
             {
-                AccountConnectedEvent(new System.Collections.Generic.KeyValuePair<string, long>(accountName, sessionId), new EventArgs());
+                AccountConnectedEvent(new KeyValuePair<string, long>(accountName, sessionId), new EventArgs());
             }
         }
 
-        private void OnCharacterConnected(string characterName, long characterId)
+        private void OnAccountDisconnected(string accountName)
+        {
+            if (AccountDisconnectedEvent != null && !string.IsNullOrEmpty(accountName))
+            {
+                AccountDisconnectedEvent(accountName, new EventArgs());
+            }
+        }
+
+        private void OnBazaarRefresh(string worldgroup, long BazaarItemId)
+        {
+            BazaarRefresh?.Invoke(new Tuple<string, long>(worldgroup, BazaarItemId), new EventArgs());
+        }
+
+        private void OnCharacterConnected(string worldgroup, string characterName, long characterId)
         {
             if (CharacterConnectedEvent != null && !string.IsNullOrEmpty(characterName))
             {
-                CharacterConnectedEvent(new Tuple<string,long>(characterName, characterId), new EventArgs());
+                CharacterConnectedEvent(new Tuple<string, string, long>(worldgroup, characterName, characterId), new EventArgs());
+            }
+        }
+
+        private void OnCharacterDisconnected(string worldgroup, string characterName, long characterId)
+        {
+            if (CharacterDisconnectedEvent != null && !string.IsNullOrEmpty(characterName))
+            {
+                CharacterDisconnectedEvent(new Tuple<string, string, long>(worldgroup, characterName, characterId), new EventArgs());
+            }
+        }
+
+        private void OnFamilyRefresh(string worldgroup, long FamilyId)
+        {
+            FamilyRefresh?.Invoke(new Tuple<string, long>(worldgroup, FamilyId), new EventArgs());
+        }
+
+        private void OnMessageSentToCharacter(string worldgroup, string sourcecharacterName, string characterName, string message, int fromChannel, MessageType messageType)
+        {
+            MessageSentToCharacter?.Invoke(new Tuple<string, string, string, string, int, MessageType>(worldgroup, sourcecharacterName, characterName, message, fromChannel, messageType), new EventArgs());
+        }
+
+        private void OnPenaltyLogRefresh(int id)
+        {
+            PenaltyLogRefresh?.Invoke(id, new EventArgs());
+        }
+
+        private void OnRelationRefresh(string worldgroup, long id)
+        {
+            RelationRefresh?.Invoke(new Tuple<string, long>(worldgroup, id), new EventArgs());
+        }
+
+        private void OnSessionKicked(long? sessionId, string accountName)
+        {
+            if (SessionKickedEvent != null && (sessionId.HasValue || !string.IsNullOrEmpty(accountName)))
+            {
+                SessionKickedEvent(new Tuple<long?, string>(sessionId, accountName), new EventArgs());
             }
         }
 

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using OpenNos.Domain;
+using System;
 
 namespace OpenNos.Core
 {
@@ -14,6 +15,11 @@ namespace OpenNos.Core
         #endregion
 
         #region Properties
+
+        /// <summary>
+        /// Permission to handle the packet
+        /// </summary>
+        public AuthorityType Authority { get; set; }
 
         /// <summary>
         /// Unique identification of the Packet

@@ -39,9 +39,8 @@
     <SlowCheetahTargets Condition=" '$(SlowCheetah_EnableImportFromNuGet)'=='true' and Exists('$(SlowCheetah_NuGetImportPath)') ">$(SlowCheetah_NuGetImportPath)</SlowCheetahTargets>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="AutoMapper, Version=5.1.1.0, Culture=neutral, PublicKeyToken=be96cd2c38ef1005, processorArchitecture=MSIL">
-      <HintPath>..\packages\AutoMapper.5.1.1\lib\net45\AutoMapper.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="AutoMapper, Version=6.0.2.0, Culture=neutral, PublicKeyToken=be96cd2c38ef1005, processorArchitecture=MSIL">
+      <HintPath>..\packages\AutoMapper.6.0.2\lib\net45\AutoMapper.dll</HintPath>
     </Reference>
     <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
       <HintPath>..\packages\EntityFramework.6.1.3\lib\net45\EntityFramework.dll</HintPath>
@@ -51,9 +50,8 @@
       <HintPath>..\packages\EntityFramework.6.1.3\lib\net45\EntityFramework.SqlServer.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="log4net, Version=1.2.15.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
-      <HintPath>..\packages\log4net.2.0.5\lib\net45-full\log4net.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="log4net, Version=2.0.8.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
+      <HintPath>..\packages\log4net.2.0.8\lib\net45-full\log4net.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Web.XmlTransform, Version=2.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Web.Xdt.2.1.1\lib\net40\Microsoft.Web.XmlTransform.dll</HintPath>
@@ -77,10 +75,124 @@
   <ItemGroup>
     <Compile Include="Base\MappingBaseDAO.cs" />
     <Compile Include="Base\SynchronizableBaseDAO.cs" />
+    <Compile Include="BazaarItemDAO.cs" />
+    <Compile Include="CardDAO.cs" />
+    <Compile Include="Entities\ItemCard.cs" />
+    <Compile Include="Entities\Mate.cs" />
+    <Compile Include="Entities\ScriptedInstance.cs" />
+    <Compile Include="MateDAO.cs" />
+    <Compile Include="ItemCardDAO.cs" />
+    <Compile Include="Migrations\201702072152008_Aphrodite22.cs" />
+    <Compile Include="Migrations\201702072152008_Aphrodite22.Designer.cs">
+      <DependentUpon>201702072152008_Aphrodite22.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201702072210529_Aphrodite23.cs" />
+    <Compile Include="Migrations\201702072210529_Aphrodite23.Designer.cs">
+      <DependentUpon>201702072210529_Aphrodite23.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201702081209208_Aphrodite24.cs" />
+    <Compile Include="Migrations\201702081209208_Aphrodite24.Designer.cs">
+      <DependentUpon>201702081209208_Aphrodite24.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201702081841495_Aphrodite25.cs" />
+    <Compile Include="Migrations\201702081841495_Aphrodite25.Designer.cs">
+      <DependentUpon>201702081841495_Aphrodite25.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201702082130328_Aphrodite26.cs" />
+    <Compile Include="Migrations\201702082130328_Aphrodite26.Designer.cs">
+      <DependentUpon>201702082130328_Aphrodite26.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201702112212020_Aphrodite27.cs" />
+    <Compile Include="Migrations\201702112212020_Aphrodite27.Designer.cs">
+      <DependentUpon>201702112212020_Aphrodite27.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201702112245077_Aphrodite28.cs" />
+    <Compile Include="Migrations\201702112245077_Aphrodite28.Designer.cs">
+      <DependentUpon>201702112245077_Aphrodite28.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201702112247190_Aphrodite29.cs" />
+    <Compile Include="Migrations\201702112247190_Aphrodite29.Designer.cs">
+      <DependentUpon>201702112247190_Aphrodite29.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201702112357474_Aphrodite30.cs" />
+    <Compile Include="Migrations\201702112357474_Aphrodite30.Designer.cs">
+      <DependentUpon>201702112357474_Aphrodite30.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201702121036186_Aphrodite31.cs" />
+    <Compile Include="Migrations\201702121036186_Aphrodite31.Designer.cs">
+      <DependentUpon>201702121036186_Aphrodite31.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201702191024471_Aphrodite32.cs" />
+    <Compile Include="Migrations\201702191024471_Aphrodite32.Designer.cs">
+      <DependentUpon>201702191024471_Aphrodite32.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201702201604368_Aphrodite33.cs" />
+    <Compile Include="Migrations\201702201604368_Aphrodite33.Designer.cs">
+      <DependentUpon>201702201604368_Aphrodite33.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201702201906392_Aphrodite34.cs" />
+    <Compile Include="Migrations\201702201906392_Aphrodite34.Designer.cs">
+      <DependentUpon>201702201906392_Aphrodite34.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201702210941199_Aphrodite35.cs" />
+    <Compile Include="Migrations\201702210941199_Aphrodite35.Designer.cs">
+      <DependentUpon>201702210941199_Aphrodite35.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201702211130531_Aphrodite36.cs" />
+    <Compile Include="Migrations\201702211130531_Aphrodite36.Designer.cs">
+      <DependentUpon>201702211130531_Aphrodite36.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201702211710431_Aphrodite37.cs" />
+    <Compile Include="Migrations\201702211710431_Aphrodite37.Designer.cs">
+      <DependentUpon>201702211710431_Aphrodite37.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201702212150143_Aphrodite38.cs" />
+    <Compile Include="Migrations\201702212150143_Aphrodite38.Designer.cs">
+      <DependentUpon>201702212150143_Aphrodite38.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201702231511297_Aphrodite39.cs" />
+    <Compile Include="Migrations\201702231511297_Aphrodite39.Designer.cs">
+      <DependentUpon>201702231511297_Aphrodite39.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201702242159213_Aphrodite40.cs" />
+    <Compile Include="Migrations\201702242159213_Aphrodite40.Designer.cs">
+      <DependentUpon>201702242159213_Aphrodite40.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201703060254179_Aphrodite41.cs" />
+    <Compile Include="Migrations\201703060254179_Aphrodite41.Designer.cs">
+      <DependentUpon>201703060254179_Aphrodite41.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201703140832333_Aphrodite42.cs" />
+    <Compile Include="Migrations\201703140832333_Aphrodite42.Designer.cs">
+      <DependentUpon>201703140832333_Aphrodite42.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201703141319218_Aphrodite43.cs" />
+    <Compile Include="Migrations\201703141319218_Aphrodite43.Designer.cs">
+      <DependentUpon>201703141319218_Aphrodite43.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201703141643203_Aphrodite44.cs" />
+    <Compile Include="Migrations\201703141643203_Aphrodite44.Designer.cs">
+      <DependentUpon>201703141643203_Aphrodite44.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201703141654479_Aphrodite45.cs" />
+    <Compile Include="Migrations\201703141654479_Aphrodite45.Designer.cs">
+      <DependentUpon>201703141654479_Aphrodite45.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201703162322176_Aphrodite46.cs" />
+    <Compile Include="Migrations\201703162322176_Aphrodite46.Designer.cs">
+      <DependentUpon>201703162322176_Aphrodite46.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201703191106529_Aphrodite47.cs" />
+    <Compile Include="Migrations\201703191106529_Aphrodite47.Designer.cs">
+      <DependentUpon>201703191106529_Aphrodite47.cs</DependentUpon>
+    </Compile>
+    <Compile Include="MinilandObjectDAO.cs" />
     <Compile Include="CharacterRelationDAO.cs" />
     <Compile Include="Entities\Account.cs" />
     <Compile Include="Entities\Base\SynchronizableBaseEntity.cs" />
+    <Compile Include="Entities\BazaarItem.cs" />
     <Compile Include="Entities\BoxInstance.cs" />
+    <Compile Include="Entities\Card.cs" />
     <Compile Include="Entities\CellonOption.cs" />
     <Compile Include="CellonOptionDAO.cs" />
     <Compile Include="Entities\Character.cs" />
@@ -101,9 +213,13 @@
     <Compile Include="Entities\MapMonster.cs" />
     <Compile Include="Entities\MapType.cs" />
     <Compile Include="Entities\MapTypeMap.cs" />
+    <Compile Include="Entities\MinilandObject.cs" />
     <Compile Include="Entities\PenaltyLog.cs" />
     <Compile Include="Entities\RespawnMapType.cs" />
+    <Compile Include="Entities\SkillCard.cs" />
     <Compile Include="Entities\SpecialistInstance.cs" />
+    <Compile Include="Entities\StaticBonus.cs" />
+    <Compile Include="Entities\StaticBuff.cs" />
     <Compile Include="Entities\UsableInstance.cs" />
     <Compile Include="Entities\WearableInstance.cs" />
     <Compile Include="FamilyCharacterDAO.cs" />
@@ -133,6 +249,78 @@
     <Compile Include="Migrations\201612141513035_Aphrodite3.cs" />
     <Compile Include="Migrations\201612141513035_Aphrodite3.Designer.cs">
       <DependentUpon>201612141513035_Aphrodite3.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201612271423243_Aphrodite4.cs" />
+    <Compile Include="Migrations\201612271423243_Aphrodite4.Designer.cs">
+      <DependentUpon>201612271423243_Aphrodite4.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201612291528349_Aphrodite5.cs" />
+    <Compile Include="Migrations\201612291528349_Aphrodite5.Designer.cs">
+      <DependentUpon>201612291528349_Aphrodite5.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201701022059471_Aphrodite6.cs" />
+    <Compile Include="Migrations\201701022059471_Aphrodite6.Designer.cs">
+      <DependentUpon>201701022059471_Aphrodite6.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201701072141289_Aphrodite7.cs" />
+    <Compile Include="Migrations\201701072141289_Aphrodite7.Designer.cs">
+      <DependentUpon>201701072141289_Aphrodite7.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201701091242298_Aphrodite8.cs" />
+    <Compile Include="Migrations\201701091242298_Aphrodite8.Designer.cs">
+      <DependentUpon>201701091242298_Aphrodite8.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201701101528067_Aphrodite9.cs" />
+    <Compile Include="Migrations\201701101528067_Aphrodite9.Designer.cs">
+      <DependentUpon>201701101528067_Aphrodite9.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201701161306456_Aphrodite10.cs" />
+    <Compile Include="Migrations\201701161306456_Aphrodite10.Designer.cs">
+      <DependentUpon>201701161306456_Aphrodite10.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201701161908470_Aphrodite11.cs" />
+    <Compile Include="Migrations\201701161908470_Aphrodite11.Designer.cs">
+      <DependentUpon>201701161908470_Aphrodite11.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201701162025524_Aphrodite12.cs" />
+    <Compile Include="Migrations\201701162025524_Aphrodite12.Designer.cs">
+      <DependentUpon>201701162025524_Aphrodite12.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201701171238484_Aphrodite13.cs" />
+    <Compile Include="Migrations\201701171238484_Aphrodite13.Designer.cs">
+      <DependentUpon>201701171238484_Aphrodite13.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201701171246311_Aphrodite14.cs" />
+    <Compile Include="Migrations\201701171246311_Aphrodite14.Designer.cs">
+      <DependentUpon>201701171246311_Aphrodite14.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201701171250521_Aphrodite15.cs" />
+    <Compile Include="Migrations\201701171250521_Aphrodite15.Designer.cs">
+      <DependentUpon>201701171250521_Aphrodite15.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201701171351476_Aphrodite16.cs" />
+    <Compile Include="Migrations\201701171351476_Aphrodite16.Designer.cs">
+      <DependentUpon>201701171351476_Aphrodite16.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201701201302197_Aphrodite17.cs" />
+    <Compile Include="Migrations\201701201302197_Aphrodite17.Designer.cs">
+      <DependentUpon>201701201302197_Aphrodite17.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201701272045282_Aphrodite18.cs" />
+    <Compile Include="Migrations\201701272045282_Aphrodite18.Designer.cs">
+      <DependentUpon>201701272045282_Aphrodite18.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201702041342396_Aphrodite19.cs" />
+    <Compile Include="Migrations\201702041342396_Aphrodite19.Designer.cs">
+      <DependentUpon>201702041342396_Aphrodite19.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201702051546106_Aphrodite20.cs" />
+    <Compile Include="Migrations\201702051546106_Aphrodite20.Designer.cs">
+      <DependentUpon>201702051546106_Aphrodite20.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201702062229059_Aphrodite21.cs" />
+    <Compile Include="Migrations\201702062229059_Aphrodite21.Designer.cs">
+      <DependentUpon>201702062229059_Aphrodite21.cs</DependentUpon>
     </Compile>
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="NpcMonsterSkillDAO.cs" />
@@ -164,11 +352,14 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Entities\Shopskill.cs" />
     <Compile Include="Entities\Skill.cs" />
+    <Compile Include="SkillCardDAO.cs" />
     <Compile Include="SkillDAO.cs" />
     <Compile Include="ShopSkillDAO.cs" />
     <Compile Include="CharacterSkillDAO.cs" />
     <Compile Include="Entities\Teleporter.cs" />
+    <Compile Include="StaticBonusDAO.cs" />
     <Compile Include="TeleporterDAO.cs" />
+    <Compile Include="ScriptedInstanceDAO.cs" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
@@ -217,15 +408,139 @@
     <EmbeddedResource Include="Migrations\201612141513035_Aphrodite3.resx">
       <DependentUpon>201612141513035_Aphrodite3.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201612271423243_Aphrodite4.resx">
+      <DependentUpon>201612271423243_Aphrodite4.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201612291528349_Aphrodite5.resx">
+      <DependentUpon>201612291528349_Aphrodite5.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201701022059471_Aphrodite6.resx">
+      <DependentUpon>201701022059471_Aphrodite6.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201701072141289_Aphrodite7.resx">
+      <DependentUpon>201701072141289_Aphrodite7.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201701091242298_Aphrodite8.resx">
+      <DependentUpon>201701091242298_Aphrodite8.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201701101528067_Aphrodite9.resx">
+      <DependentUpon>201701101528067_Aphrodite9.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201701161306456_Aphrodite10.resx">
+      <DependentUpon>201701161306456_Aphrodite10.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201701161908470_Aphrodite11.resx">
+      <DependentUpon>201701161908470_Aphrodite11.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201701162025524_Aphrodite12.resx">
+      <DependentUpon>201701162025524_Aphrodite12.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201701171238484_Aphrodite13.resx">
+      <DependentUpon>201701171238484_Aphrodite13.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201701171246311_Aphrodite14.resx">
+      <DependentUpon>201701171246311_Aphrodite14.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201701171250521_Aphrodite15.resx">
+      <DependentUpon>201701171250521_Aphrodite15.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201701171351476_Aphrodite16.resx">
+      <DependentUpon>201701171351476_Aphrodite16.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201701201302197_Aphrodite17.resx">
+      <DependentUpon>201701201302197_Aphrodite17.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201701272045282_Aphrodite18.resx">
+      <DependentUpon>201701272045282_Aphrodite18.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201702041342396_Aphrodite19.resx">
+      <DependentUpon>201702041342396_Aphrodite19.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201702051546106_Aphrodite20.resx">
+      <DependentUpon>201702051546106_Aphrodite20.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201702062229059_Aphrodite21.resx">
+      <DependentUpon>201702062229059_Aphrodite21.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201702072152008_Aphrodite22.resx">
+      <DependentUpon>201702072152008_Aphrodite22.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201702072210529_Aphrodite23.resx">
+      <DependentUpon>201702072210529_Aphrodite23.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201702081209208_Aphrodite24.resx">
+      <DependentUpon>201702081209208_Aphrodite24.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201702081841495_Aphrodite25.resx">
+      <DependentUpon>201702081841495_Aphrodite25.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201702082130328_Aphrodite26.resx">
+      <DependentUpon>201702082130328_Aphrodite26.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201702112212020_Aphrodite27.resx">
+      <DependentUpon>201702112212020_Aphrodite27.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201702112245077_Aphrodite28.resx">
+      <DependentUpon>201702112245077_Aphrodite28.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201702112247190_Aphrodite29.resx">
+      <DependentUpon>201702112247190_Aphrodite29.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201702112357474_Aphrodite30.resx">
+      <DependentUpon>201702112357474_Aphrodite30.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201702121036186_Aphrodite31.resx">
+      <DependentUpon>201702121036186_Aphrodite31.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201702191024471_Aphrodite32.resx">
+      <DependentUpon>201702191024471_Aphrodite32.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201702201604368_Aphrodite33.resx">
+      <DependentUpon>201702201604368_Aphrodite33.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201702201906392_Aphrodite34.resx">
+      <DependentUpon>201702201906392_Aphrodite34.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201702210941199_Aphrodite35.resx">
+      <DependentUpon>201702210941199_Aphrodite35.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201702211130531_Aphrodite36.resx">
+      <DependentUpon>201702211130531_Aphrodite36.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201702211710431_Aphrodite37.resx">
+      <DependentUpon>201702211710431_Aphrodite37.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201702212150143_Aphrodite38.resx">
+      <DependentUpon>201702212150143_Aphrodite38.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201702231511297_Aphrodite39.resx">
+      <DependentUpon>201702231511297_Aphrodite39.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201702242159213_Aphrodite40.resx">
+      <DependentUpon>201702242159213_Aphrodite40.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201703060254179_Aphrodite41.resx">
+      <DependentUpon>201703060254179_Aphrodite41.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201703140832333_Aphrodite42.resx">
+      <DependentUpon>201703140832333_Aphrodite42.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201703141319218_Aphrodite43.resx">
+      <DependentUpon>201703141319218_Aphrodite43.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201703141643203_Aphrodite44.resx">
+      <DependentUpon>201703141643203_Aphrodite44.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201703141654479_Aphrodite45.resx">
+      <DependentUpon>201703141654479_Aphrodite45.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201703162322176_Aphrodite46.resx">
+      <DependentUpon>201703162322176_Aphrodite46.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201703191106529_Aphrodite47.resx">
+      <DependentUpon>201703191106529_Aphrodite47.cs</DependentUpon>
+    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SlowCheetahTargets)" Condition="Exists('$(SlowCheetahTargets)')" Label="SlowCheetah" />
-  <Import Project="$(ProgramFiles)\MSBuild\StyleCop\v4.7\StyleCop.targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
 </Project>

@@ -15,6 +15,7 @@
 using OpenNos.Core;
 using OpenNos.DAL.EF.DB;
 using System;
+using System.Data;
 using System.Data.Common;
 
 namespace OpenNos.DAL.EF.Helpers
@@ -27,27 +28,9 @@ namespace OpenNos.DAL.EF.Helpers
 
         #endregion
 
-        #region Instantiation
-
-        static DataAccessHelper()
-        {
-        }
-
-        #endregion
-
         #region Properties
 
-        public static OpenNosContext Context
-        {
-            get
-            {
-                if (_context == null)
-                {
-                    _context = CreateContext();
-                }
-                return _context;
-            }
-        }
+        private static OpenNosContext Context => _context ?? (_context = CreateContext());
 
         #endregion
 
@@ -61,8 +44,8 @@ namespace OpenNos.DAL.EF.Helpers
         public static DbTransaction BeginTransaction()
         {
             // an open connection is needed for a transaction
-            if (Context.Database.Connection.State == System.Data.ConnectionState.Broken ||
-                Context.Database.Connection.State == System.Data.ConnectionState.Closed)
+            if (Context.Database.Connection.State == ConnectionState.Broken ||
+                Context.Database.Connection.State == ConnectionState.Closed)
             {
                 Context.Database.Connection.Open();
             }
@@ -97,7 +80,7 @@ namespace OpenNos.DAL.EF.Helpers
             {
                 try
                 {
-                    context.Database.Initialize(force: true);
+                    context.Database.Initialize(true);
                     context.Database.Connection.Open();
                     Logger.Log.Info(Language.Instance.GetMessageFromKey("DATABASE_INITIALIZED"));
                 }

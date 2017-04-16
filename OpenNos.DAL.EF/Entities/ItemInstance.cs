@@ -12,16 +12,31 @@
  * GNU General Public License for more details.
  */
 
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace OpenNos.DAL.EF
 {
-    using System;
-    using System.ComponentModel.DataAnnotations.Schema;
-
     public class ItemInstance : SynchronizableBaseEntity
     {
+        #region Instantiation
+
+        public ItemInstance()
+        {
+            BazaarItem = new HashSet<BazaarItem>();
+            MinilandObject = new HashSet<MinilandObject>();
+        }
+
+        #endregion
+
         #region Properties
 
         public int Amount { get; set; }
+
+        public virtual ICollection<BazaarItem> BazaarItem { get; set; }
+
+        public long? BazaarItemId { get; set; }
 
         [ForeignKey(nameof(BoundCharacterId))]
         public Character BoundCharacter { get; set; }
@@ -42,6 +57,8 @@ namespace OpenNos.DAL.EF
         public DateTime? ItemDeleteTime { get; set; }
 
         public short ItemVNum { get; set; }
+
+        public virtual ICollection<MinilandObject> MinilandObject { get; set; }
 
         public short Rare { get; set; }
 

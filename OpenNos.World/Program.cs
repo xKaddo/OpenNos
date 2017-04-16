@@ -22,7 +22,10 @@ using OpenNos.GameObject;
 using OpenNos.Handler;
 using OpenNos.WebApi.Reference;
 using System;
+using System.Configuration;
 using System.Diagnostics;
+using System.Globalization;
+using System.Net.Sockets;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -32,8 +35,6 @@ namespace OpenNos.World
     public class Program
     {
         #region Members
-
-        private const string IPADDRESS = "127.0.0.1";
 
         private static EventHandler exitHandler;
         private static ManualResetEvent run = new ManualResetEvent(true);
@@ -63,7 +64,7 @@ namespace OpenNos.World
 
         public static void Main(string[] args)
         {
-            System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = System.Globalization.CultureInfo.GetCultureInfo("en-US");
+            CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.GetCultureInfo("en-US");
 
             // initialize Logger
             Logger.InitializeLogger(LogManager.GetLogger(typeof(Program)));
@@ -71,7 +72,7 @@ namespace OpenNos.World
             FileVersionInfo fileVersionInfo = FileVersionInfo.GetVersionInfo(assembly.Location);
 
             Console.Title = $"OpenNos World Server v{fileVersionInfo.ProductVersion}";
-            int port = Convert.ToInt32(System.Configuration.ConfigurationManager.AppSettings["WorldPort"]);
+            int port = Convert.ToInt32(ConfigurationManager.AppSettings["WorldPort"]);
             string text = $"WORLD SERVER v{fileVersionInfo.ProductVersion} - by OpenNos Team";
             int offset = Console.WindowWidth / 2 + text.Length / 2;
             string separator = new string('=', Console.WindowWidth);
@@ -87,7 +88,7 @@ namespace OpenNos.World
                 RegisterMappings();
 
                 // initialilize maps
-                ServerManager.Instance.Initialize(IPADDRESS, port);
+                ServerManager.Instance.Initialize();
             }
             else
             {
@@ -108,29 +109,26 @@ namespace OpenNos.World
                 Logger.Log.Error("General Error", ex);
             }
             NetworkManager<WorldEncryption> networkManager = null;
-            portloop:
+        portloop:
             try
             {
-                networkManager = new NetworkManager<WorldEncryption>(IPADDRESS, port, typeof(CommandPacketHandler), typeof(LoginEncryption), true);
+                networkManager = new NetworkManager<WorldEncryption>(ConfigurationManager.AppSettings["IPADDRESS"], port, typeof(CommandPacketHandler), typeof(LoginEncryption), true);
             }
-            catch(System.Net.Sockets.SocketException ex)
+            catch (SocketException ex)
             {
-                if(ex.ErrorCode == 10048)
+                if (ex.ErrorCode == 10048)
                 {
                     port++;
                     Logger.Log.Info("Port already in use! Incrementing...");
                     goto portloop;
                 }
-                else
-                {
-                    Logger.Log.Error("General Error", ex);
-                    Environment.Exit(1);
-                }
+                Logger.Log.Error("General Error", ex);
+                Environment.Exit(1);
             }
 
-            string serverGroup = System.Configuration.ConfigurationManager.AppSettings["ServerGroup"];
-            int sessionLimit = Convert.ToInt32(System.Configuration.ConfigurationManager.AppSettings["SessionLimit"]);
-            int? newChannelId = ServerCommunicationClient.Instance.HubProxy.Invoke<int?>("RegisterWorldserver", serverGroup, new WorldserverDTO(ServerManager.Instance.WorldId, new ScsTcpEndPoint(IPADDRESS, port), sessionLimit)).Result;
+            ServerManager.Instance.ServerGroup = ConfigurationManager.AppSettings["ServerGroup"];
+            int sessionLimit = Convert.ToInt32(ConfigurationManager.AppSettings["SessionLimit"]);
+            int? newChannelId = ServerCommunicationClient.Instance.HubProxy.Invoke<int?>("RegisterWorldserver", ServerManager.Instance.ServerGroup, new WorldserverDTO(ServerManager.Instance.WorldId, new ScsTcpEndPoint(ConfigurationManager.AppSettings["IPADDRESS"], port), sessionLimit)).Result;
 
             if (newChannelId.HasValue)
             {
@@ -144,9 +142,9 @@ namespace OpenNos.World
 
         private static bool ExitHandler(CtrlType sig)
         {
-            string serverGroup = System.Configuration.ConfigurationManager.AppSettings["ServerGroup"];
-            int port = Convert.ToInt32(System.Configuration.ConfigurationManager.AppSettings["WorldPort"]);
-            ServerCommunicationClient.Instance.HubProxy.Invoke("UnregisterWorldserver", serverGroup, new ScsTcpEndPoint(IPADDRESS, port)).Wait();
+            string serverGroup = ConfigurationManager.AppSettings["ServerGroup"];
+            int port = Convert.ToInt32(ConfigurationManager.AppSettings["WorldPort"]);
+            ServerCommunicationClient.Instance.HubProxy.Invoke("UnregisterWorldserver", serverGroup, new ScsTcpEndPoint(ConfigurationManager.AppSettings["IPADDRESS"], port)).Wait();
 
             ServerManager.Instance.Shout(string.Format(Language.Instance.GetMessageFromKey("SHUTDOWN_SEC"), 5));
             ServerManager.Instance.SaveAll();
@@ -158,10 +156,10 @@ namespace OpenNos.World
         private static void RegisterMappings()
         {
             // register mappings for items
-            DAOFactory.IteminstanceDao.RegisterMapping(typeof(BoxInstance));
-            DAOFactory.IteminstanceDao.RegisterMapping(typeof(SpecialistInstance));
-            DAOFactory.IteminstanceDao.RegisterMapping(typeof(WearableInstance));
-            DAOFactory.IteminstanceDao.InitializeMapper(typeof(ItemInstance));
+            DAOFactory.IteminstanceDAO.RegisterMapping(typeof(BoxInstance));
+            DAOFactory.IteminstanceDAO.RegisterMapping(typeof(SpecialistInstance));
+            DAOFactory.IteminstanceDAO.RegisterMapping(typeof(WearableInstance));
+            DAOFactory.IteminstanceDAO.InitializeMapper(typeof(ItemInstance));
 
             // entities
             DAOFactory.AccountDAO.RegisterMapping(typeof(Account)).InitializeMapper();
@@ -173,6 +171,7 @@ namespace OpenNos.World
             DAOFactory.DropDAO.RegisterMapping(typeof(DropDTO)).InitializeMapper();
             DAOFactory.GeneralLogDAO.RegisterMapping(typeof(GeneralLogDTO)).InitializeMapper();
             DAOFactory.ItemDAO.RegisterMapping(typeof(ItemDTO)).InitializeMapper();
+            DAOFactory.BazaarItemDAO.RegisterMapping(typeof(BazaarItemDTO)).InitializeMapper();
             DAOFactory.MailDAO.RegisterMapping(typeof(MailDTO)).InitializeMapper();
             DAOFactory.MapDAO.RegisterMapping(typeof(MapDTO)).InitializeMapper();
             DAOFactory.MapMonsterDAO.RegisterMapping(typeof(MapMonster)).InitializeMapper();
@@ -186,16 +185,29 @@ namespace OpenNos.World
             DAOFactory.NpcMonsterSkillDAO.RegisterMapping(typeof(NpcMonsterSkill)).InitializeMapper();
             DAOFactory.PenaltyLogDAO.RegisterMapping(typeof(PenaltyLogDTO)).InitializeMapper();
             DAOFactory.PortalDAO.RegisterMapping(typeof(PortalDTO)).InitializeMapper();
+            DAOFactory.PortalDAO.RegisterMapping(typeof(Portal)).InitializeMapper();
             DAOFactory.QuicklistEntryDAO.RegisterMapping(typeof(QuicklistEntryDTO)).InitializeMapper();
             DAOFactory.RecipeDAO.RegisterMapping(typeof(Recipe)).InitializeMapper();
             DAOFactory.RecipeItemDAO.RegisterMapping(typeof(RecipeItemDTO)).InitializeMapper();
+            DAOFactory.MinilandObjectDAO.RegisterMapping(typeof(MinilandObjectDTO)).InitializeMapper();
+            DAOFactory.MinilandObjectDAO.RegisterMapping(typeof(MinilandObject)).InitializeMapper();
             DAOFactory.RespawnDAO.RegisterMapping(typeof(RespawnDTO)).InitializeMapper();
             DAOFactory.RespawnMapTypeDAO.RegisterMapping(typeof(RespawnMapTypeDTO)).InitializeMapper();
             DAOFactory.ShopDAO.RegisterMapping(typeof(Shop)).InitializeMapper();
             DAOFactory.ShopItemDAO.RegisterMapping(typeof(ShopItemDTO)).InitializeMapper();
             DAOFactory.ShopSkillDAO.RegisterMapping(typeof(ShopSkillDTO)).InitializeMapper();
+            DAOFactory.CardDAO.RegisterMapping(typeof(CardDTO)).InitializeMapper();
+            DAOFactory.ItemCardDAO.RegisterMapping(typeof(ItemCardDTO)).InitializeMapper();
+            DAOFactory.SkillCardDAO.RegisterMapping(typeof(SkillCardDTO)).InitializeMapper();
             DAOFactory.SkillDAO.RegisterMapping(typeof(Skill)).InitializeMapper();
+            DAOFactory.MateDAO.RegisterMapping(typeof(MateDTO)).InitializeMapper();
+            DAOFactory.MateDAO.RegisterMapping(typeof(Mate)).InitializeMapper();
             DAOFactory.TeleporterDAO.RegisterMapping(typeof(TeleporterDTO)).InitializeMapper();
+            DAOFactory.StaticBonusDAO.RegisterMapping(typeof(StaticBonusDTO)).InitializeMapper();
+            DAOFactory.FamilyDAO.RegisterMapping(typeof(Family)).InitializeMapper();
+            DAOFactory.FamilyCharacterDAO.RegisterMapping(typeof(FamilyCharacter)).InitializeMapper();
+            DAOFactory.TimeSpaceDAO.RegisterMapping(typeof(ScriptedInstanceDTO)).InitializeMapper();
+            DAOFactory.TimeSpaceDAO.RegisterMapping(typeof(ScriptedInstance)).InitializeMapper();
         }
 
         [DllImport("Kernel32")]

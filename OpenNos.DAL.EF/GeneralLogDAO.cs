@@ -61,18 +61,29 @@ namespace OpenNos.DAL.EF
             }
         }
 
-        public IEnumerable<GeneralLogDTO> LoadByAccount(long accountId)
+        public IEnumerable<GeneralLogDTO> LoadAll()
         {
             using (var context = DataAccessHelper.CreateContext())
             {
-                foreach (GeneralLog GeneralLog in context.GeneralLog.Where(s => s.AccountId.Equals(accountId)))
+                foreach (GeneralLog generalLog in context.GeneralLog)
+                {
+                    yield return _mapper.Map<GeneralLogDTO>(generalLog);
+                }
+            }
+        }
+
+        public IEnumerable<GeneralLogDTO> LoadByAccount(long? accountId)
+        {
+            using (var context = DataAccessHelper.CreateContext())
+            {
+                foreach (GeneralLog GeneralLog in context.GeneralLog.Where(s => s.AccountId == accountId))
                 {
                     yield return _mapper.Map<GeneralLogDTO>(GeneralLog);
                 }
             }
         }
 
-        public IEnumerable<GeneralLogDTO> LoadByLogType(string logType, Nullable<long> characterId)
+        public IEnumerable<GeneralLogDTO> LoadByLogType(string logType, long? characterId)
         {
             using (var context = DataAccessHelper.CreateContext())
             {
@@ -102,13 +113,13 @@ namespace OpenNos.DAL.EF
             }
         }
 
-        public void WriteGeneralLog(long accountId, string ipAddress, Nullable<long> characterId, string logType, string logData)
+        public void WriteGeneralLog(long accountId, string ipAddress, long? characterId, string logType, string logData)
         {
             try
             {
                 using (var context = DataAccessHelper.CreateContext())
                 {
-                    GeneralLog log = new GeneralLog()
+                    GeneralLog log = new GeneralLog
                     {
                         AccountId = accountId,
                         IpAddress = ipAddress,

@@ -157,7 +157,7 @@
     <value>Coś^nie^działa?^Zajrzyj^do^Troubleshooting.md</value>
   </data>
   <data name="BN2" xml:space="preserve">
-    <value>Potrzebujesz^pomocy?^Użyj^naszego^servera^Discord:^https://discordapp.com/invite/N8eqPUh</value>
+    <value>Potrzebujesz^pomocy?^Użyj^naszego^servera^Discord:^https://discordapp.com/qdPMDv5</value>
   </data>
   <data name="BN3" xml:space="preserve">
     <value>Pozdrowienia^od^Teamu^OpenNos!</value>
@@ -169,7 +169,7 @@
     <value>OpenNos^autorstwa:^0Lucifer0,^chucktheripper,^Ciapa1,^MasterDomino,^genyx,^Martazza,^KrisYiu,^Anthony</value>
   </data>
   <data name="BN6" xml:space="preserve">
-    <value>Chcesz^wziaść^udziać^w^naszym^projekcie?^github.com/OpenNos/OpenNos</value>
+    <value>Chcesz^wziąć^udział^w^naszym^projekcie?^github.com/OpenNos/OpenNos</value>
   </data>
   <data name="BUFF_BLOCKED" xml:space="preserve">
     <value>Ikony buff'ów zablokowane.</value>
@@ -459,7 +459,7 @@
     <value>{0} Załadowanych MapNpc!</value>
   </data>
   <data name="PACKET_ARRIVED" xml:space="preserve">
-    <value>Odebrano pakiet, packet: {0}</value>
+    <value>Odebrano pakiet, pakiet: {0}</value>
   </data>
   <data name="PACKET_FAILURE" xml:space="preserve">
     <value>Nie udało sie wysłać pakietu {0} do użytkownika {1}, {2}.</value>
@@ -725,7 +725,7 @@
     <value>Ulepszanie karty specjalisty powiodło się!</value>
   </data>
   <data name="MINILAND_WELCOME_MESSAGE" xml:space="preserve">
-    <value>Witamy</value>
+    <value>Witamy!</value>
   </data>
   <data name="DROP_RATE_NOW" xml:space="preserve">
     <value>Drop rate</value>
@@ -786,12 +786,6 @@
   </data>
   <data name="GROUP_ADMIN" xml:space="preserve">
     <value>Jesteś zarządcą tej grupy.</value>
-  </data>
-  <data name="MUTED_PLURAL" xml:space="preserve">
-    <value>Zostałeś wyciszony za {0} na {1} godzin/y.</value>
-  </data>
-  <data name="MUTED_SINGULAR" xml:space="preserve">
-    <value>Zostałeś wyciszony za {0} na 1 godzinę.</value>
   </data>
   <data name="NOT_ENOUGH_MP" xml:space="preserve">
     <value>Niewystarczająca ilość many, aby użyć tej umiejętności.</value>
@@ -914,7 +908,7 @@
     <value>Zdobyłeś {0} x {1}</value>
   </data>
   <data name="ITEM_BOUND_TO" xml:space="preserve">
-    <value>Gracz {1} zdobył {0} x {2}</value>
+    <value>{1} zdobył {0} x {2}</value>
   </data>
   <data name="ITEM_NOT_FOUND" xml:space="preserve">
     <value>Nie znaleziono takiego przedmiotu!</value>
@@ -977,7 +971,7 @@
     <value>Twój opis został zaktualizowany!</value>
   </data>
   <data name="NOT_ENOUGH_ITEMS" xml:space="preserve">
-    <value>Potrzebujesz przynajmniej {0}x{1}</value>
+    <value>Potrzebujesz przynajmniej {0} x {1}</value>
   </data>
   <data name="BAD_DIGNITY" xml:space="preserve">
     <value>Zła wartość godności!</value>
@@ -1127,7 +1121,7 @@
     <value>Nie masz skrzydeł przyjaźni!</value>
   </data>
   <data name="WANT_TO_SAVE_POSITION" xml:space="preserve">
-    <value>czy chcesz zapisać tą pozycje?</value>
+    <value>Czy chcesz zapisać swoją pozycje?</value>
   </data>
   <data name="BOT_MESSAGE_4" xml:space="preserve">
     <value>Nigdy nie ufaj graczom proszącym cię o wejście w jakiś link</value>
@@ -1140,5 +1134,212 @@
   </data>
   <data name="ANGEL" xml:space="preserve">
     <value>Anioł</value>
+  </data>
+  <data name="CREATE_FAMILY" xml:space="preserve">
+    <value>Czy chcesz założyć rodzinę z członkami swojej grupy?</value>
+  </data>
+  <data name="DISMISS_FAMILY" xml:space="preserve">
+    <value>Czy chcesz rozwiązać swoją rodzinę?</value>
+  </data>
+  <data name="FAMILY_INVITATION_NOT_ALLOWED" xml:space="preserve">
+    <value>Nie masz uprawnień, żeby zapraszać graczy do rodziny!</value>
+  </data>
+  <data name="FAMILY_NAME_ALREADY_USED" xml:space="preserve">
+    <value>Rodzina z taką nazwą już istnieje!</value>
+  </data>
+  <data name="NOT_ALLOWED_KICK" xml:space="preserve">
+    <value>Nie masz uprawnień, żeby wyrzucać członków rodziny!</value>
+  </data>
+  <data name="GROUP_MEMBER_ALREADY_IN_FAMILY" xml:space="preserve">
+    <value>Członek twojej grupy ma już rodzinę!</value>
+  </data>
+  <data name="FAMILY_FOUNDED" xml:space="preserve">
+    <value>Rodzina {0} została założona!</value>
+  </data>
+  <data name="FAMILY_GROUP_NOT_FULL" xml:space="preserve">
+    <value>Nie możesz założyć rodziny bez całej grupy!</value>
+  </data>
+  <data name="FAMILY_INVITED" xml:space="preserve">
+    <value>Gracz {0} został zaproszony do rodziny!</value>
+  </data>
+  <data name="ASK_FAMILY_INVITED" xml:space="preserve">
+    <value>Zostałeś zaproszony do rodziny {0}, czy chcesz dołączyć?</value>
+  </data>
+  <data name="FAMILY_JOINED" xml:space="preserve">
+    <value>Gracz {0} dołączył do rodziny {1}!</value>
+  </data>
+  <data name="FAMILY_KICKED" xml:space="preserve">
+    <value>Gracz {0} został wyrzucony z rodziny!</value>
+  </data>
+  <data name="NO_HANDLER_GURI" xml:space="preserve">
+    <value>Brak Handler'a guri dla: {0}</value>
+  </data>
+  <data name="LANGUAGE_REQUIRED" xml:space="preserve">
+    <value>Tylko {0} jest dozwolonym językiem!</value>
+  </data>
+  <data name="ASK_REVIVE_PVP" xml:space="preserve">
+    <value>Czy chcesz zostać wskrzeszony/a? będzie Cię to kosztować 100 złota!</value>
+  </data>
+  <data name="LOSE_REP" xml:space="preserve">
+    <value>Straciłeś/aś {0} reputacji!</value>
+  </data>
+  <data name="ACT4_PVP_DIE" xml:space="preserve">
+    <value>Zostałeś/aś zabity/a przez wroga, z powodu klątwy Lodowej Korony nie możesz się odrodzić!</value>
+  </data>
+  <data name="EFFECT_ACTIVATED" xml:space="preserve">
+    <value>Efekt {0} został aktywowany!</value>
+  </data>
+  <data name="INFO_BAZAAR" xml:space="preserve">
+    <value>Nie możesz otworzyć bazaru ponieważ nie posiadasz wymaganego przedmiotu!</value>
+  </data>
+  <data name="NOTICE_BAZAAR" xml:space="preserve">
+    <value>Uwaga, możesz zostać zaatakowany/a przez potwory kiedy bazar jest otwarty!</value>
+  </data>
+  <data name="REMOVE_FROM_BAZAAR" xml:space="preserve">
+    <value>Sprzedaż zakończona, otrzymujesz {0} złota!</value>
+  </data>
+  <data name="STATE_CHANGED" xml:space="preserve">
+    <value>Sprzedaż zakończona, ponieważ przedmiot nie jest już dostępny!</value>
+  </data>
+  <data name="LOGIN_MEDAL" xml:space="preserve">
+    <value>Medal bazaru jest aktualnie aktywny!</value>
+  </data>
+  <data name="GROUP_SHARE_INFO" xml:space="preserve">
+    <value>Wysłałeś prośbę aby podzielić się punktem powrotu</value>
+  </data>
+  <data name="INVITED_YOU_SHARE" xml:space="preserve">
+    <value>Czy chcesz ustawić punkt powrotu od gracza {0}</value>
+  </data>
+  <data name="CHANGED_SHARE" xml:space="preserve">
+    <value>Zmieniłeś punkt powrotu, członków grupy!</value>
+  </data>
+  <data name="REFUSED_SHARE" xml:space="preserve">
+    <value>Odrzuciłeś zmianę punktu powrotu!</value>
+  </data>
+  <data name="LIMIT_EXCEEDED" xml:space="preserve">
+    <value>Nie możesz wystawić więcej przedmiotów do bazaru, ponieważ osiągnąłeś już limit!</value>
+  </data>
+  <data name="PRICE_EXCEEDED" xml:space="preserve">
+    <value>Limit ceny został przekroczony!</value>
+  </data>
+  <data name="ASSISTANT" xml:space="preserve">
+    <value>Asystent</value>
+  </data>
+  <data name="BAZAR_LOADED" xml:space="preserve">
+    <value>Bazar załadowany!</value>
+  </data>
+  <data name="CHANNEL" xml:space="preserve">
+    <value>kanał</value>
+  </data>
+  <data name="FAMILYCALL" xml:space="preserve">
+    <value>czat rodziny</value>
+  </data>
+  <data name="HEAD" xml:space="preserve">
+    <value>Założyciel</value>
+  </data>
+  <data name="MANAGER" xml:space="preserve">
+    <value>Manadżer</value>
+  </data>
+  <data name="MEMBER" xml:space="preserve">
+    <value>Członek</value>
+  </data>
+  <data name="ALREADY_TWO_ASSISTANT" xml:space="preserve">
+    <value>Już masz dwóch asystentów!</value>
+  </data>
+  <data name="ASSISTANT_UNDEMOTABLE" xml:space="preserve">
+    <value>Nie możesz usunąć drugiego asystenta</value>
+  </data>
+  <data name="HEAD_UNDEMOTABLE" xml:space="preserve">
+    <value>Nie możesz usunąć założyciela rodziny</value>
+  </data>
+  <data name="NOT_FAMILY_HEAD" xml:space="preserve">
+    <value>Nie jesteś założycielem rodziny</value>
+  </data>
+  <data name="ONLY_PROMOTE_ASSISTANT" xml:space="preserve">
+    <value>Możesz promować asystenta tylko jako założyciela rodziny!</value>
+  </data>
+  <data name="PLAYER_OFFLINE" xml:space="preserve">
+    <value>Gracz nie jest online!</value>
+  </data>
+  <data name="CHARACTER_FAMILY_LOGGED_IN" xml:space="preserve">
+    <value>{0}({1}) zalogował się!</value>
+  </data>
+  <data name="CANT_CHANGE_MESSAGE" xml:space="preserve">
+    <value>Już zmodyfikowałeś swoją wiadomość dzisiaj!</value>
+  </data>
+  <data name="ACCEPTED_SHARE" xml:space="preserve">
+    <value>Zaakceptowałeś zmianę punktu powrotu z {0}!</value>
+  </data>
+  <data name="OBJECT_IN_BAZAAR" xml:space="preserve">
+    <value>Przedmiot został dodany do bazaru!</value>
+  </data>
+  <data name="INSTANTBATTLE_MINUTES" xml:space="preserve">
+    <value>Błyskawiczna Bitwa rozpocznie się za {0} minut.</value>
+  </data>
+  <data name="INSTANTBATTLE_MINUTES_REMAINING" xml:space="preserve">
+    <value>Blyskawiczna Bitwa zakończy się za {0} minut.</value>
+  </data>
+  <data name="INSTANTBATTLE_MONSTERS_APPEAR" xml:space="preserve">
+    <value>Uwaga! Potwory nadchodzą!</value>
+  </data>
+  <data name="INSTANTBATTLE_MONSTERS_HERE" xml:space="preserve">
+    <value>Uwaga! Wsparcie potworów przybywa!</value>
+  </data>
+  <data name="INSTANTBATTLE_MONSTERS_INCOMING" xml:space="preserve">
+    <value>Potwory nadchodzą!</value>
+  </data>
+  <data name="INSTANTBATTLE_MONSTERS_WAVE" xml:space="preserve">
+    <value>Kolejna fala potworów przybywa!</value>
+  </data>
+  <data name="INSTANTBATTLE_QUESTION" xml:space="preserve">
+    <value>Czy chcesz dołączyć do Błyskawicznej Bitwy?</value>
+  </data>
+  <data name="INSTANTBATTLE_SECONDS" xml:space="preserve">
+    <value>Błyskawiczna Bitwa rozpocznie się za {0} sekund.</value>
+  </data>
+  <data name="INSTANTBATTLE_SECONDS_REMAINING" xml:space="preserve">
+    <value>Błyskawiczna Bitwa zakończy się za {0} sekund.</value>
+  </data>
+  <data name="INSTANTBATTLE_STARTED" xml:space="preserve">
+    <value>Błyskawiczna Bitwa rozpoczęta!</value>
+  </data>
+  <data name="INSTANTBATTLE_SUCCEEDED" xml:space="preserve">
+    <value>Wygraliście Błyskawiczną Bitwę!</value>
+  </data>
+  <data name="LOD_CLOSED" xml:space="preserve">
+    <value>Wrota Krainy Śmierci zostały zamknięte!</value>
+  </data>
+  <data name="LOD_REQUIERE_LVL" xml:space="preserve">
+    <value>Musisz osiągnąć 55 poziom, aby móc użyć wrót Krainy Śmierci</value>
+  </data>
+  <data name="MINILAND_VISITOR" xml:space="preserve">
+    <value>Wizyt: {0}, dzisiejsze wizyty: {1}</value>
+  </data>
+  <data name="NEED_FAMILY" xml:space="preserve">
+    <value>Nie możesz przejść przez wrota Krainy Śmierci bez rodziny</value>
+  </data>
+  <data name="NOT_ENOUGH_SAVER" xml:space="preserve">
+    <value>Nie masz wystarczająco Fontanny Wybawcy, aby się odrodzić!</value>
+  </data>
+  <data name="REPUT_INCREASE" xml:space="preserve">
+    <value>Reputacja podniesiona!</value>
+  </data>
+  <data name="WIN_MONEY" xml:space="preserve">
+    <value>Złoto: +{0}</value>
+  </data>
+  <data name="WIN_REPUT" xml:space="preserve">
+    <value>Reputacja: +{0}</value>
+  </data>
+  <data name="WIN_SP_POINT" xml:space="preserve">
+    <value>Punkty SP: +{0}</value>
+  </data>
+  <data name="HORN_APPEAR" xml:space="preserve">
+    <value>Rzeź Mrocznego Władcy rozpoczęła się!</value>
+  </data>
+  <data name="HORN_DISAPEAR" xml:space="preserve">
+    <value>Mroczny Władca zniknął</value>
+  </data>
+  <data name="SUPPORT" xml:space="preserve">
+    <value>Support</value>
   </data>
 </root>

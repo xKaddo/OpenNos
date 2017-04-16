@@ -13,7 +13,6 @@
  */
 
 using OpenNos.Domain;
-using System;
 
 namespace OpenNos.Data
 {
@@ -30,8 +29,6 @@ namespace OpenNos.Data
         public int Act4Points { get; set; }
 
         public int ArenaWinner { get; set; }
-
-        public int Backpack { get; set; }
 
         public string Biography { get; set; }
 
@@ -50,8 +47,6 @@ namespace OpenNos.Data
         public bool ExchangeBlocked { get; set; }
 
         public int Faction { get; set; }
-
-        public long? FamilyCharacterId { get; set; }
 
         public bool FamilyRequestBlocked { get; set; }
 
@@ -81,8 +76,6 @@ namespace OpenNos.Data
 
         public long JobLevelXp { get; set; }
 
-        public DateTime LastLogin { get; set; }
-
         public byte Level { get; set; }
 
         public long LevelXp { get; set; }
@@ -97,7 +90,15 @@ namespace OpenNos.Data
 
         public int MasterTicket { get; set; }
 
+        public byte MaxMateCount { get; set; }
+
         public bool MinilandInviteBlocked { get; set; }
+
+        public string MinilandMessage { get; set; }
+
+        public short MinilandPoint { get; set; }
+
+        public MinilandState MinilandState { get; set; }
 
         public bool MouseAimLock { get; set; }
 

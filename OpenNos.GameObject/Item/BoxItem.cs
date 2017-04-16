@@ -15,6 +15,9 @@
 using OpenNos.Core;
 using OpenNos.Data;
 using OpenNos.Domain;
+using OpenNos.GameObject.Helpers;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace OpenNos.GameObject
 {
@@ -30,10 +33,95 @@ namespace OpenNos.GameObject
 
         #region Methods
 
-        public override void Use(ClientSession session, ref ItemInstance inv, bool delay = false, string[] packetsplit = null)
+        public override void Use(ClientSession session, ref ItemInstance inv, byte Option = 0, string[] packetsplit = null)
         {
             switch (Effect)
             {
+                case 0:
+                    if (Option == 0)
+                    {
+                        if (packetsplit.Length == 9)
+                        {
+                            BoxInstance box = session.Character.Inventory.LoadBySlotAndType<BoxInstance>(inv.Slot, InventoryType.Equipment);
+                            if (box != null)
+                            {
+                                if (box.HoldingVNum == 0)
+                                {
+                                    session.SendPacket($"qna #guri^300^8023^{inv.Slot}^{packetsplit[3]} {Language.Instance.GetMessageFromKey("ASK_STORE_PET")}");
+                                }
+                                else
+                                {
+                                    session.SendPacket($"qna #guri^300^8023^{inv.Slot} {Language.Instance.GetMessageFromKey("ASK_RELEASE_PET")}");
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        //u_i 2 2000000 0 21 0 0
+                        BoxInstance box = session.Character.Inventory.LoadBySlotAndType<BoxInstance>(inv.Slot, InventoryType.Equipment);
+                        if (box != null)
+                        {
+                            if (box.HoldingVNum == 0)
+                            {
+                                if (packetsplit.Length == 1)
+                                {
+                                    int PetId;
+                                    if (int.TryParse(packetsplit[0], out PetId))
+                                    {
+                                        Mate mate = session.Character.Mates.FirstOrDefault(s => s.MateTransportId == PetId);
+                                        box.HoldingVNum = mate.NpcMonsterVNum;
+                                        box.SpLevel = mate.Level;
+                                        box.SpDamage = mate.Attack;
+                                        box.SpDefence = mate.Defence;
+                                        session.Character.Mates.Remove(mate);
+                                        session.SendPacket(UserInterfaceHelper.Instance.GenerateInfo(Language.Instance.GetMessageFromKey("PET_STORED")));
+                                        session.SendPacket(UserInterfaceHelper.Instance.GeneratePClear());
+                                        session.SendPackets(session.Character.GenerateScP());
+                                        session.SendPackets(session.Character.GenerateScN());
+                                        session.CurrentMapInstance?.Broadcast(mate.GenerateOut());
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                Mate mate = new Mate(session.Character, (short)box.HoldingVNum, 1, MateType.Pet);
+                                mate.Attack = box.SpDamage;
+                                mate.Defence = box.SpDefence;
+                                if (session.Character.AddPet(mate))
+                                {
+                                    session.Character.Inventory.RemoveItemAmountFromInventory(1, inv.Id);
+                                    session.SendPacket(UserInterfaceHelper.Instance.GenerateInfo(Language.Instance.GetMessageFromKey("PET_LEAVE_BEAD")));
+                                }
+                            }
+                        }
+                    }
+                    break;
+
+                case 1:
+                    if (Option == 0)
+                    {
+                        session.SendPacket($"qna #guri^300^8023^{inv.Slot} {Language.Instance.GetMessageFromKey("ASK_RELEASE_PET")}");
+                    }
+                    else
+                    {
+                        if (session.CurrentMapInstance == session.Character.Miniland)
+                        {
+                            Mate mate = new Mate(session.Character, (short)EffectValue, LevelMinimum, ItemSubType == 1 ? MateType.Partner : MateType.Pet);
+                            if (session.Character.AddPet(mate))
+                            {
+                                session.Character.Inventory.RemoveItemAmountFromInventory(1, inv.Id);
+                                session.SendPacket(UserInterfaceHelper.Instance.GenerateInfo(Language.Instance.GetMessageFromKey("PET_LEAVE_BEAD")));
+                            }
+                        }
+                        else
+                        {
+                            //TODO ADD MINILAND SENDPACKET
+                        }
+                    }
+
+                    break;
+
                 case 69:
                     if (EffectValue == 1 || EffectValue == 2)
                     {
@@ -46,11 +134,10 @@ namespace OpenNos.GameObject
                             }
                             else
                             {
-                                ItemInstance newInv = session.Character.Inventory.AddNewToInventory(box.HoldingVNum);
-                                if (newInv != null)
+                                List<ItemInstance> newInv = session.Character.Inventory.AddNewToInventory(box.HoldingVNum);
+                                if (newInv.Any())
                                 {
-                                    SpecialistInstance specialist = session.Character.Inventory.LoadBySlotAndType<SpecialistInstance>(newInv.Slot, newInv.Type);
-
+                                    SpecialistInstance specialist = session.Character.Inventory.LoadBySlotAndType<SpecialistInstance>(newInv.First().Slot, newInv.First().Type);
                                     if (specialist != null)
                                     {
                                         specialist.SlDamage = box.SlDamage;
@@ -70,18 +157,20 @@ namespace OpenNos.GameObject
                                         specialist.Upgrade = box.Upgrade;
                                         specialist.XP = box.XP;
                                     }
-
                                     short Slot = inv.Slot;
                                     if (Slot != -1)
                                     {
-                                        session.SendPacket(session.Character.GenerateSay($"{Language.Instance.GetMessageFromKey("ITEM_ACQUIRED")}: {specialist.Item.Name} + {specialist.Upgrade}", 12));
-                                        session.SendPacket(session.Character.GenerateInventoryAdd(specialist.ItemVNum, newInv.Amount, specialist.Type, newInv.Slot, 0, 0, specialist.Upgrade, 0));
+                                        if (specialist != null)
+                                        {
+                                            session.SendPacket(session.Character.GenerateSay($"{Language.Instance.GetMessageFromKey("ITEM_ACQUIRED")}: {specialist.Item.Name} + {specialist.Upgrade}", 12));
+                                            newInv.ForEach(s => session.SendPacket(specialist.GenerateInventoryAdd()));
+                                        }
                                         session.Character.Inventory.RemoveItemAmountFromInventory(1, box.Id);
                                     }
                                 }
                                 else
                                 {
-                                    session.SendPacket(session.Character.GenerateMsg(Language.Instance.GetMessageFromKey("NOT_ENOUGH_PLACE"), 0));
+                                    session.SendPacket(UserInterfaceHelper.Instance.GenerateMsg(Language.Instance.GetMessageFromKey("NOT_ENOUGH_PLACE"), 0));
                                 }
                             }
                         }
@@ -97,27 +186,28 @@ namespace OpenNos.GameObject
                             }
                             else
                             {
-                                ItemInstance newInv = session.Character.Inventory.AddNewToInventory(box.HoldingVNum);
-                                if (newInv != null)
+                                List<ItemInstance> newInv = session.Character.Inventory.AddNewToInventory(box.HoldingVNum);
+                                if (newInv.Any())
                                 {
-                                    WearableInstance fairy = session.Character.Inventory.LoadBySlotAndType<WearableInstance>(newInv.Slot, newInv.Type);
-
+                                    WearableInstance fairy = session.Character.Inventory.LoadBySlotAndType<WearableInstance>(newInv.First().Slot, newInv.First().Type);
                                     if (fairy != null)
                                     {
                                         fairy.ElementRate = box.ElementRate;
                                     }
-
                                     short Slot = inv.Slot;
                                     if (Slot != -1)
                                     {
-                                        session.SendPacket(session.Character.GenerateSay($"{Language.Instance.GetMessageFromKey("ITEM_ACQUIRED")}: {fairy.Item.Name} ({fairy.ElementRate}%)", 12));
-                                        session.SendPacket(session.Character.GenerateInventoryAdd(fairy.ItemVNum, newInv.Amount, fairy.Type, newInv.Slot, 0, 0, fairy.Upgrade, 0));
+                                        if (fairy != null)
+                                        {
+                                            session.SendPacket(session.Character.GenerateSay($"{Language.Instance.GetMessageFromKey("ITEM_ACQUIRED")}: {fairy.Item.Name} ({fairy.ElementRate}%)", 12));
+                                            newInv.ForEach(s => session.SendPacket(fairy.GenerateInventoryAdd()));
+                                        }
                                         session.Character.Inventory.RemoveItemAmountFromInventory(1, box.Id);
                                     }
                                 }
                                 else
                                 {
-                                    session.SendPacket(session.Character.GenerateMsg(Language.Instance.GetMessageFromKey("NOT_ENOUGH_PLACE"), 0));
+                                    session.SendPacket(UserInterfaceHelper.Instance.GenerateMsg(Language.Instance.GetMessageFromKey("NOT_ENOUGH_PLACE"), 0));
                                 }
                             }
                         }
@@ -133,25 +223,24 @@ namespace OpenNos.GameObject
                             }
                             else
                             {
-                                ItemInstance newInv = session.Character.Inventory.AddNewToInventory(box.HoldingVNum);
-                                if (newInv != null)
+                                List<ItemInstance> newInv = session.Character.Inventory.AddNewToInventory(box.HoldingVNum);
+                                if (newInv.Any())
                                 {
                                     short Slot = inv.Slot;
                                     if (Slot != -1)
                                     {
-                                        session.SendPacket(session.Character.GenerateSay($"{Language.Instance.GetMessageFromKey("ITEM_ACQUIRED")}: {newInv.Item.Name} x 1)", 12));
-                                        session.SendPacket(session.Character.GenerateInventoryAdd(newInv.ItemVNum, newInv.Amount, newInv.Type, newInv.Slot, 0, 0, newInv.Upgrade, 0));
+                                        session.SendPacket(session.Character.GenerateSay($"{Language.Instance.GetMessageFromKey("ITEM_ACQUIRED")}: {newInv.First().Item.Name} x 1)", 12));
+                                        newInv.ForEach(s => session.SendPacket(s.GenerateInventoryAdd()));
                                         session.Character.Inventory.RemoveItemAmountFromInventory(1, box.Id);
                                     }
                                 }
                                 else
                                 {
-                                    session.SendPacket(session.Character.GenerateMsg(Language.Instance.GetMessageFromKey("NOT_ENOUGH_PLACE"), 0));
+                                    session.SendPacket(UserInterfaceHelper.Instance.GenerateMsg(Language.Instance.GetMessageFromKey("NOT_ENOUGH_PLACE"), 0));
                                 }
                             }
                         }
                     }
-
                     break;
 
                 default:

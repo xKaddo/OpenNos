@@ -12,33 +12,25 @@
  * GNU General Public License for more details.
  */
 
+using OpenNos.Domain;
+
 namespace OpenNos.DAL.EF
 {
-    using Domain;
-    using System;
-    using System.Collections.Generic;
-    using System.ComponentModel.DataAnnotations;
-
     public class CharacterRelation
     {
-        #region Instantiation
-
-        public CharacterRelation()
-        {
-
-        }
-
-        #endregion
-
         #region Properties
 
-        public long CharacterRelationId { get; set; }
+        public virtual Character Character1 { get; set; }
+
+        public virtual Character Character2 { get; set; }
 
         public long CharacterId { get; set; }
 
+        public long CharacterRelationId { get; set; }
+
         public long RelatedCharacterId { get; set; }
 
-        public CharacterRelationType RelationType { get; set;}
+        public CharacterRelationType RelationType { get; set; }
 
         #endregion
     }

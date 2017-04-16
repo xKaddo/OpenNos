@@ -22,6 +22,13 @@ namespace OpenNos.Domain
         Miniland = 3,
         Specialist = 6,
         Costume = 7,
-        Wear = 8
+        Wear = 8,
+        Bazaar = 9,
+        Warehouse = 10,
+        FamilyWareHouse = 11,
+        PetWarehouse = 12,
+        FirstPartnerInventory = 13,
+        SecondPartnerInventory = 14,
+        ThirdPartnerInventory = 15,
     }
 }

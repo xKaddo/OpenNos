@@ -24,9 +24,11 @@ namespace OpenNos.DAL.Interface
 
         DeleteResult DeleteById(int mapMonsterId);
 
+        bool DoesMonsterExist(int mapMonsterId);
+
         MapMonsterDTO Insert(MapMonsterDTO mapmonster);
 
-        void Insert(List<MapMonsterDTO> monsters);
+        void Insert(IEnumerable<MapMonsterDTO> monsters);
 
         MapMonsterDTO LoadById(int mapMonsterId);
 

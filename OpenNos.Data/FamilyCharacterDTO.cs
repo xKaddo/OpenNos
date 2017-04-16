@@ -13,7 +13,6 @@
  */
 
 using OpenNos.Domain;
-using System;
 
 namespace OpenNos.Data
 {
@@ -32,8 +31,6 @@ namespace OpenNos.Data
         public long FamilyCharacterId { get; set; }
 
         public long FamilyId { get; set; }
-
-        public DateTime JoinDate { get; set; }
 
         public FamilyMemberRank Rank { get; set; }
 

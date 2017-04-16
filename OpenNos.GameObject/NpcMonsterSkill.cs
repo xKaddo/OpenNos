@@ -25,14 +25,6 @@ namespace OpenNos.GameObject
 
         #endregion
 
-        #region Instantiation
-
-        public NpcMonsterSkill()
-        {
-        }
-
-        #endregion
-
         #region Properties
 
         public short Hit { get; set; }
@@ -46,7 +38,7 @@ namespace OpenNos.GameObject
         {
             get
             {
-                return skill ?? (skill = ServerManager.GetSkill(SkillVNum));
+                return skill ?? (skill = ServerManager.Instance.GetSkill(SkillVNum));
             }
         }
 

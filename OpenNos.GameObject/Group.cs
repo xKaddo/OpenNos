@@ -13,7 +13,7 @@
  */
 
 using OpenNos.Core;
-using System;
+using OpenNos.Domain;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -23,8 +23,7 @@ namespace OpenNos.GameObject
     {
         #region Members
 
-        private ThreadSafeSortedList<long, ClientSession> _characters;
-        private bool _disposed;
+        private ThreadSafeGenericList<ClientSession> _characters;
         private int _order;
 
         #endregion
@@ -33,7 +32,7 @@ namespace OpenNos.GameObject
 
         public Group()
         {
-            _characters = new ThreadSafeSortedList<long, ClientSession>();
+            _characters = new ThreadSafeGenericList<ClientSession>();
             GroupId = ServerManager.Instance.GetNextGroupId();
             _order = 0;
         }
@@ -50,11 +49,11 @@ namespace OpenNos.GameObject
             }
         }
 
-        public List<ClientSession> Characters
+        public ThreadSafeGenericList<ClientSession> Characters
         {
             get
             {
-                return _characters.GetAllItems();
+                return _characters;
             }
         }
 
@@ -66,23 +65,29 @@ namespace OpenNos.GameObject
 
         #region Methods
 
-        public void Dispose()
+        public List<string> GeneratePst(ClientSession player)
         {
-            if (!_disposed)
-            {
-                Dispose(true);
-                GC.SuppressFinalize(this);
-                _disposed = true;
-            }
-        }
-
-        public List<string> GeneratePst()
-        {
-            int i = 0;
             List<string> str = new List<string>();
+            var i = 0;
             foreach (ClientSession session in Characters)
             {
-                str.Add($"pst 1 {session.Character.CharacterId} {++i} { (int)(session.Character.Hp / session.Character.HPLoad() * 100) } {(int)(session.Character.Mp / session.Character.MPLoad() * 100) } {session.Character.HPLoad()} {session.Character.MPLoad()} {(byte)session.Character.Class} {(byte)session.Character.Gender} {(session.Character.UseSp ? session.Character.Morph : 0)}");
+                if (session == player)
+                {
+                    str.AddRange(
+                        player.Character.Mates.Where(s => s.IsTeamMember)
+                            .OrderByDescending(s => s.MateType)
+                            .Select(
+                                mate =>
+                                    $"pst 2 {mate.MateTransportId} {(mate.MateType == MateType.Partner ? "0" : "1")} {mate.Hp / mate.MaxHp * 100} {mate.Mp / mate.MaxMp * 100} {mate.Hp} {mate.Mp} 0 0 0"));
+                    i = session.Character.Mates.Count(s => s.IsTeamMember);
+                    str.Add(
+                        $"pst 1 {session.Character.CharacterId} {++i} {(int)(session.Character.Hp / session.Character.HPLoad() * 100)} {(int)(session.Character.Mp / session.Character.MPLoad() * 100)} {session.Character.HPLoad()} {session.Character.MPLoad()} {(byte)session.Character.Class} {(byte)session.Character.Gender} {(session.Character.UseSp ? session.Character.Morph : 0)}");
+                }
+                else
+                {
+                    str.Add(
+                        $"pst 1 {session.Character.CharacterId} {++i} {(int)(session.Character.Hp / session.Character.HPLoad() * 100)} {(int)(session.Character.Mp / session.Character.MPLoad() * 100)} {session.Character.HPLoad()} {session.Character.MPLoad()} {(byte)session.Character.Class} {(byte)session.Character.Gender} {(session.Character.UseSp ? session.Character.Morph : 0)}{session.Character.Buff.GetAllActiveBuffs()}");
+                }
             }
             return str;
         }
@@ -109,12 +114,12 @@ namespace OpenNos.GameObject
 
         public bool IsMemberOfGroup(long characterId)
         {
-            return _characters != null && _characters.ContainsKey(characterId);
+            return _characters != null && _characters.Any(s => s?.Character?.CharacterId == characterId);
         }
 
         public bool IsMemberOfGroup(ClientSession session)
         {
-            return _characters != null && _characters.ContainsKey(session.Character.CharacterId);
+            return _characters != null && _characters.Any(s => s?.Character?.CharacterId == session.Character.CharacterId);
         }
 
         public void JoinGroup(long characterId)
@@ -129,21 +134,13 @@ namespace OpenNos.GameObject
         public void JoinGroup(ClientSession session)
         {
             session.Character.Group = this;
-            _characters[session.Character.CharacterId] = session;
+            _characters.Add(session);
         }
 
         public void LeaveGroup(ClientSession session)
         {
             session.Character.Group = null;
-            _characters.Remove(session.Character.CharacterId);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                _characters.Dispose();
-            }
+            _characters.RemoveAll(s => s?.Character.CharacterId == session.Character.CharacterId);
         }
 
         #endregion

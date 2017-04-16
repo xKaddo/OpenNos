@@ -12,11 +12,22 @@
  * GNU General Public License for more details.
  */
 
-using OpenNos.DAL.Interface;
+using OpenNos.Data;
+using OpenNos.Data.Enums;
+using System.Collections.Generic;
 
-namespace OpenNos.DAL
+namespace OpenNos.DAL.Interface
 {
     public interface IFamilyLogDAO : IMappingBaseDAO
     {
+        #region Methods
+
+        DeleteResult Delete(long familyId);
+
+        SaveResult InsertOrUpdate(ref FamilyLogDTO famlog);
+
+        IEnumerable<FamilyLogDTO> LoadByFamilyId(long familyId);
+
+        #endregion
     }
 }

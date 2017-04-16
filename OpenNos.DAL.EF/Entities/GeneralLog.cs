@@ -12,18 +12,18 @@
  * GNU General Public License for more details.
  */
 
+using System;
+using System.ComponentModel.DataAnnotations;
+
 namespace OpenNos.DAL.EF
 {
-    using System;
-    using System.ComponentModel.DataAnnotations;
-
     public class GeneralLog
     {
         #region Properties
 
         public virtual Account Account { get; set; }
 
-        public long AccountId { get; set; }
+        public long? AccountId { get; set; }
 
         public virtual Character Character { get; set; }
 

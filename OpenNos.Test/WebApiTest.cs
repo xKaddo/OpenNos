@@ -1,14 +1,15 @@
-﻿using System;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Threading.Tasks;
-using System.Linq;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenNos.WebApi.Reference;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace OpenNos.Test
 {
     [TestClass]
     public class WebApiTest
     {
+        #region Methods
+
         [TestMethod]
         public async Task TestParelellConnections()
         {
@@ -23,7 +24,8 @@ namespace OpenNos.Test
                     Assert.IsTrue(hasRegisteredAccountLogin);
                 });
             }
-
         }
+
+        #endregion
     }
 }
